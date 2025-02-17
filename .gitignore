@@ -1,10 +1,17 @@
+# Ignore all
+*
+
+# Unignore all with extensions
+!*.*
+
+# Unignore all dirs
+!*/
+
 # Mac specific file
 .DS_Store
 
-# # VSCode specific files
-# .vscode
-
-# # 
+# VSCode specific files
+.vscode
 
 # Object files
 *.ko
@@ -27,7 +34,7 @@
 *.lo
 
 # Shared objects (inc. Windows DLLs)
-*.dll
+*.dll   
 *.so
 *.so.*
 *.dylib
@@ -45,4 +52,5 @@
 *.su
 *.idb
 *.pdb
+
 
