@@ -1,6 +1,9 @@
 # Mac specific file
 .DS_Store
 
+# VSCode specific files
+.vscode
+
 # Object files
 *.ko
 *.obj
