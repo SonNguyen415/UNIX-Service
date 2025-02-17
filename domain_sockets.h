@@ -11,7 +11,7 @@
 #include <sys/un.h>
 #include <stdlib.h>
 
-int
+static inline int
 domain_socket_client_create(const char *file_name)
 {
 	struct sockaddr_un addr;
@@ -30,7 +30,7 @@ domain_socket_client_create(const char *file_name)
 	return fd;
 }
 
-int
+static inline int
 domain_socket_server_create(const char *file_name)
 {
 	struct sockaddr_un addr;

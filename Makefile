@@ -1,17 +1,19 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I.
-LDFLAGS =
-TARGET = test
-SRC = main.c  
-OBJ = $(SRC:.c=.o)
+CFLAGS = -Wall -Wextra -I.
 
-all: $(TARGET)
+SERVER_SRC = server.c
+CLIENT_SRC = client.c
 
-$(TARGET): $(OBJ)
-	$(CC) $(LDFLAGS) -o $@ $^
+SERVER_BIN = server
+CLIENT_BIN = client
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+all: $(SERVER_BIN) $(CLIENT_BIN)
+
+$(SERVER_BIN): $(SERVER_SRC)
+	$(CC) $(CFLAGS) -o $(SERVER_BIN) $(SERVER_SRC)
+
+$(CLIENT_BIN): $(CLIENT_SRC)
+	$(CC) $(CFLAGS) -o $(CLIENT_BIN) $(CLIENT_SRC)
 
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -f $(SERVER_BIN) $(CLIENT_BIN)
