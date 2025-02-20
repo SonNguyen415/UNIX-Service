@@ -1,4 +1,4 @@
-#include <domain_sockets.h>
+#include "domain_sockets.h"
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -81,7 +81,6 @@ int main(void) {
 
     close(socket_desc);
     close(epoll_fd);
-    close(socket_desc);
     printf("Server shutting down...\n");
 
     return 0;
