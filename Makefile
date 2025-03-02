@@ -13,7 +13,7 @@ $(SERVER_BIN): $(SERVER_SRC)
 	$(CC) $(CFLAGS) -o $(SERVER_BIN) $(SERVER_SRC)
 
 $(CLIENT_BIN): $(CLIENT_SRC)
-	$(CC) $(CFLAGS) -o $(CLIENT_BIN) $(CLIENT_SRC)
+	$(CC) $(CFLAGS) -o $(CLIENT_BIN) $(CLIENT_SRC) -pthread
 
 clean:
 	rm -f $(SERVER_BIN) $(CLIENT_BIN)

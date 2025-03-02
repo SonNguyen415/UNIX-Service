@@ -11,6 +11,14 @@
 #include <sys/un.h>
 #include <stdlib.h>
 
+#define MAX_MSG_SIZE 1024
+#define MAX_USERNAME 32
+
+struct chat_message {
+	char username[MAX_USERNAME];
+	char content[MAX_MSG_SIZE];
+};
+
 static inline int
 domain_socket_client_create(const char *file_name)
 {
