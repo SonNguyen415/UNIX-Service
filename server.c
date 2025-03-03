@@ -9,9 +9,15 @@
 #include <fcntl.h>
 
 #define MAX_EVENTS 10
-#define MAX_CLIENTS 100
+#define MAX_CLIENTS 10
 
-int client_sockets[MAX_CLIENTS];
+struct user_info {
+    char username[MAX_USERNAME];
+    int socket_fd;
+};
+
+struct user_info users[MAX_CLIENTS];
+
 int num_clients = 0;
 
 void set_nonblocking(int sock) {
@@ -24,26 +30,76 @@ void panic(char *msg) {
     exit(EXIT_FAILURE);
 }
 
-void broadcast_message(struct chat_message *msg, int sender_fd) {
-    for (int i = 0; i < num_clients; i++) {
-        if (client_sockets[i] != sender_fd && client_sockets[i] > 0) {
-            write(client_sockets[i], msg, sizeof(struct chat_message));
-        }
-    }
-}
-
-void add_client(int client_fd) {
+void add_client(int client_fd, const char *username) {
     if (num_clients < MAX_CLIENTS) {
-        client_sockets[num_clients++] = client_fd;
+        strncpy(users[num_clients].username, username, MAX_USERNAME - 1);
+        users[num_clients].socket_fd = client_fd;
+        num_clients++;
     }
 }
 
 void remove_client(int client_fd) {
     for (int i = 0; i < num_clients; i++) {
-        if (client_sockets[i] == client_fd) {
-            client_sockets[i] = client_sockets[num_clients - 1];
+        if (users[i].socket_fd == client_fd) {
+            users[i] = users[num_clients - 1];
             num_clients--;
             break;
+        }
+    }
+}
+
+int find_user_socket(const char *username) {
+    for (int i = 0; i < num_clients; i++) {
+        if (strcmp(users[i].username, username) == 0) {
+            return users[i].socket_fd;
+        }
+    }
+    return -1;
+}
+
+void handle_message(struct chat_message *msg, int sender_fd) {
+    // If this is the first message from a client, update their username
+    for (int i = 0; i < num_clients; i++) {
+        if (users[i].socket_fd == sender_fd && users[i].username[0] == '\0') {
+            strncpy(users[i].username, msg->username, MAX_USERNAME - 1);
+            printf("User %s registered with fd %d\n", msg->username, sender_fd);
+            break;
+    }
+
+    if (msg->is_dm) {
+        int target_fd = find_user_socket(msg->target);
+        if (target_fd != -1) {
+            printf("Setting up DM between %s and %s\n", msg->username, msg->target);
+            
+            // Send target's fd to sender
+            if (send_fd(sender_fd, target_fd) < 0) {
+                perror("Failed to send fd to sender");
+                return;
+            }
+            
+            // Send sender's fd to target
+            struct chat_message setup_msg = {0};
+            setup_msg.is_dm = 2;  // Special flag for DM setup
+            strncpy(setup_msg.username, msg->username, MAX_USERNAME - 1);
+            write(target_fd, &setup_msg, sizeof(setup_msg));
+            if (send_fd(target_fd, sender_fd) < 0) {
+                perror("Failed to send fd to target");
+                return;
+            }
+            
+            // Send the original message through the server this first time
+            write(target_fd, msg, sizeof(struct chat_message));
+            printf("DM setup complete\n");
+        } else {
+            printf("Target user %s not found\n", msg->target);
+        }
+    } else {
+        // Regular broadcast
+        printf("Broadcasting message from %s\n", msg->username);
+        for (int i = 0; i < num_clients; i++) {
+            if (users[i].socket_fd != sender_fd) {
+                write(users[i].socket_fd, msg, sizeof(struct chat_message));
+            }
         }
     }
 }
@@ -52,9 +108,6 @@ int main(void) {
     char *ds = "chat_socket";
     int socket_desc, epoll_fd;
     struct epoll_event event, events[MAX_EVENTS];
-
-    // Initialize client array
-    memset(client_sockets, 0, sizeof(client_sockets));
 
     socket_desc = domain_socket_server_create(ds);
     if (socket_desc < 0) {
@@ -92,7 +145,7 @@ int main(void) {
                 event.data.fd = client_fd;
                 event.events = EPOLLIN;
                 epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event);
-                add_client(client_fd);
+                add_client(client_fd, "");
                 
                 printf("New client connected!\n");
             } else {
@@ -108,8 +161,7 @@ int main(void) {
                     printf("Client disconnected\n");
                 } else {
                     // Broadcast message to all other clients
-                    printf("%s: %s\n", msg.username, msg.content);
-                    broadcast_message(&msg, client_fd);
+                    handle_message(&msg, client_fd);
                 }
             }
         }
