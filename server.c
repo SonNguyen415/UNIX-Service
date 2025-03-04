@@ -64,6 +64,7 @@ void handle_message(struct chat_message *msg, int sender_fd) {
             strncpy(users[i].username, msg->username, MAX_USERNAME - 1);
             printf("User %s registered with fd %d\n", msg->username, sender_fd);
             break;
+        }
     }
 
     if (msg->is_dm) {
