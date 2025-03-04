@@ -25,7 +25,7 @@ kill $SERVER_PID
 # Wait for the server to terminate 
 wait $SERVER_PID 2>/dev/null
 
-# Check if the original message is in the server's output
+# Check if the client name shows up in the server log
 if grep -q "$CLIENT_NAME" "$SRV_OUTPUT"; then
     echo "✅ Test 1: PASSED"
     exit 0
