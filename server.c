@@ -34,7 +34,6 @@ void log_message(const char *format, ...) {
     va_list args;
     va_start(args, format);
     
-    
     // Use vfprintf to process variable arguments like log_message
     vfprintf(log_file, format, args);
     if (format[strlen(format) - 1] != '\n') {

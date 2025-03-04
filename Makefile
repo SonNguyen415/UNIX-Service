@@ -19,9 +19,8 @@ $(SERVER_BIN): $(SERVER_SRC)
 $(CLIENT_BIN): $(CLIENT_SRC)
 	$(CC) $(CFLAGS) -o $(CLIENT_BIN) $(CLIENT_SRC) -pthread
 
-
 test: $(SERVER_BIN) $(CLIENT_BIN)
-	make run_tests
+	@make --no-print-directory run_tests
 
 run_tests: $(TESTS)
 	@for script in $^; do \
@@ -29,7 +28,6 @@ run_tests: $(TESTS)
 		chmod +x $$script; \
 		./$$script; \
 	done
-
 
 clean:
 	rm -f $(SERVER_BIN) $(CLIENT_BIN) $(LOG)
