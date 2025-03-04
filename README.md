@@ -22,7 +22,7 @@ For example, see the [client](https://man7.org/tlpi/code/online/dist/sockets/ud_
 - Test 4: DM test. 3 clients connect, client A DM to client B, client C should not see message.
 - Test 5: Test what happens if more clients than MAX_CLIENTS attempt to connect.
 - Test 6: Test what happens if you attempt to have more than MAX_DM_Connections. 
-
+- Test 7: Test what happens if a client dm with an invalid id.
 
 ## Known Bugs
 1. Because of lack of UI, when you receive a message in the middle of writing your own, the received message interleave in your current message. Low priority because this seems to be client side functionality.
