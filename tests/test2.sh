@@ -47,7 +47,6 @@ wait "$SERVER_PID" 2>/dev/null
 
 # Define conditions for the test - Used Deepseek for this
 # Condition 1: Check for two strictly consecutive "New client connected!" lines
-# Condition 1: Check for two strictly consecutive "New client connected!" lines
 CONDITION1=$(awk '
     /New client connected!/ { 
         if (prev == "New client connected!") { 
