@@ -74,7 +74,7 @@ void parse_message(struct chat_message *msg, char *input) {
             int username_len = space - input - 1;
             strncpy(msg->target, input + 1, username_len);
             msg->target[username_len] = '\0';
-            strcpy(msg->content, space + 1);
+            strncpy(msg->content, space + 1, MAX_MSG_SIZE);
             msg->is_dm = 1;
             
             // Check if we already have a DM connection
@@ -86,7 +86,7 @@ void parse_message(struct chat_message *msg, char *input) {
             }
         }
     }
-    strcpy(msg->content, input);
+    strncpy(msg->content, input, MAX_MSG_SIZE);
 }
 
 int main(int argc, char *argv[]) {
@@ -104,9 +104,13 @@ int main(int argc, char *argv[]) {
         panic("Failed to create receive thread");
     }
 
-    // Main thread handles sending messages
+    // Main thread handles sending messages, send an empty message first to register
     struct chat_message msg;
     strncpy(msg.username, argv[1], MAX_USERNAME - 1);
+    msg.is_dm = 0;
+    if (write(socket_desc, &msg, sizeof(msg)) == -1) {
+        panic("Failed to register with chat server");
+    }
 
     printf("Connected to chat. Type your messages:\n");
     while (1) {
