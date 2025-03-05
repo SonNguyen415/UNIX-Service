@@ -36,7 +36,7 @@ run_tests: $(TESTS)
 	done
 
 clean:
-	rm -f $(SERVER_BIN) $(CLIENT_BIN) $(LOG) $(SOCKET) $(TEST_CLIENT)
+	rm -f $(SERVER_BIN) $(CLIENT_BIN) $(TEST_BIN) $(LOG) $(SOCKET) $(TEST_CLIENT) 
 	rm -f $(wildcard pipe*) 
 	rm -f $(wildcard *.txt)
 	find $(TEST_DIR) -type f ! -name "*.sh" -delete
