@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SERVER=./server
-CLIENT=./client
+CLIENT=./test_client
 CLIENT_NAME1="Client1" 
 CLIENT_NAME2="Client2"
 SRV_OUTPUT="server.log"

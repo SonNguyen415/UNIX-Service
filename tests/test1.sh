@@ -1,8 +1,8 @@
 #!/bin/bash 
 
 SERVER=./server
-CLIENT=./client
-CLIENT_NAME="Gabe"
+CLIENT=./test_client
+CLIENT_NAME="Client1"
 SRV_OUTPUT="server.log"
 MESSAGE_STR="Test message"
 
