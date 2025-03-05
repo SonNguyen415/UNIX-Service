@@ -43,7 +43,7 @@ exec 6>pipe3
 sleep 1
 echo "$MESSAGE_STR1" >&4
 echo "$MESSAGE_STR2" >&5
-# echo "$MESSAGE_STR3" >&6
+echo "$MESSAGE_STR3" >&6
 
 # Wait a moment to ensure server processes the messages
 sleep 1
