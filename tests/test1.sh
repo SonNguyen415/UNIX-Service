@@ -3,17 +3,19 @@
 CLIENT_NAME="Gabe"
 SRV_OUTPUT="server.log"
 MESSAGE_STR="Test message"
-touch $SRV_OUTPUT
 
+# Clear logs
+rm -f ../$SRV_OUTPUT
+
+# Create server in the background
 ./server &
 SERVER_PID=$! 
-# Echo the PID in case we need to kill it manually 
 echo "Server PID: $SERVER_PID" 
  
 # Give the server some time to start up     
 sleep 2
  
-# Run the client with a 5-second timeout, properly piping the message
+# Run the client with a 5-second timeout
 echo "$MESSAGE_STR" | timeout 5s ./client $CLIENT_NAME > /dev/null
 
 # Wait a moment to ensure server processes the message

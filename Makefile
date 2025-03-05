@@ -7,6 +7,7 @@ CLIENT_SRC = client.c
 SERVER_BIN = server
 CLIENT_BIN = client
 LOG = server.log
+SOCKET = chat_socket
 
 TEST_DIR = tests
 TESTS = $(wildcard $(TEST_DIR)/*.sh) 
@@ -30,5 +31,6 @@ run_tests: $(TESTS)
 	done
 
 clean:
-	rm -f $(SERVER_BIN) $(CLIENT_BIN) $(LOG)
+	rm -f $(SERVER_BIN) $(CLIENT_BIN) $(LOG) $(SOCKET)
+	rm -f $(wildcard pipe*) 
 	find $(TEST_DIR) -type f ! -name "*.sh" -delete
