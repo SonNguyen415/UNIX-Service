@@ -78,10 +78,10 @@ CONDITION2=$(awk '
 
 # Check if both conditions are satisfied
 if [[ "$CONDITION1" == "true" && "$CONDITION2" == "true" ]]; then
-    echo "✅ Test: PASSED - Both conditions satisfied"
+    echo "✅ Test 2: PASSED - Both conditions satisfied"
     exit 0
 else
-    echo "❌ Test: FAILED - One or both conditions not satisfied"
+    echo "❌ Test 2: FAILED - One or both conditions not satisfied"
     echo "Condition 1 (Two consecutive 'New client connected!' lines): $CONDITION1"
     echo "Condition 2 ('Broadcasting message from Client2' before 'Broadcasting message from Client1'): $CONDITION2"
     exit 1

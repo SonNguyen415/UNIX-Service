@@ -65,10 +65,10 @@ CONDITION3=$(grep "$MESSAGE_STR3" Client1.txt && grep "$MESSAGE_STR3" Client2.tx
 
 # Check if all conditions are satisfied
 if [[ "$CONDITION1" != "" && "$CONDITION2" != "" && "$CONDITION3" != "" ]]; then
-    echo "✅ Test: PASSED - All messages are present in all client logs"
+    echo "✅ Test 3: PASSED - All messages are present in all client logs"
     exit 0
 else
-    echo "❌ Test: FAILED - One or more messages are missing in the client logs"
+    echo "❌ Test 3: FAILED - One or more messages are missing in the client logs"
     echo "Condition 1 ($MESSAGE_STR1 in Client2 and Client3): $CONDITION1"
     echo "Condition 2 ($MESSAGE_STR2 in Client1 and Client3): $CONDITION2"
     echo "Condition 3 ($MESSAGE_STR3 in Client1 and Client2): $CONDITION3"
