@@ -107,9 +107,8 @@ int main(int argc, char *argv[]) {
     // Main thread handles sending messages, send an empty message first to register
     struct chat_message msg;
     strncpy(msg.username, argv[1], MAX_USERNAME - 1);
-    msg.is_dm = 0;
-    if (write(socket_desc, &msg, sizeof(msg)) == -1) {
-        panic("Failed to register with chat server");
+    if (register_user(socket_desc, &msg) == - 1) {
+        panic("Failed to register user");
     }
 
     printf("Connected to chat. Type your messages:\n");

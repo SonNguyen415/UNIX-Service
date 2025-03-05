@@ -107,3 +107,11 @@ static inline int recv_fd(int socket) {
 	fd = *((int *) CMSG_DATA(cmsg));
 	return fd;
 }
+
+// Send an empty message in order to register user
+static inline int register_user(int socket_desc, struct chat_message *msg) {
+	msg->content[0] = '\0';
+	msg->is_dm = 0;
+	printf("Registering user %s\n", msg->username);
+	return write(socket_desc, msg, sizeof(msg));
+}
