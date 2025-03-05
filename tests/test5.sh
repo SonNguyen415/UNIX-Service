@@ -61,9 +61,9 @@ fi
 
 # Report final result
 if [ "$PASSED" = true ]; then
-    echo "✅ Test 2: PASSED"
+    echo "✅ Test 5: PASSED"
     exit 0
 else
-    echo "❌ Test 2: FAILED"
+    echo "❌ Test 5: FAILED"
     exit 1
 fi
