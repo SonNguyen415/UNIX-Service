@@ -38,8 +38,14 @@ $CLIENT "$CLIENT_NAME3" < pipe3 &
 CLIENT3_PID=$!
 exec 6>pipe3
 
-# Clients send messages
 sleep 1
+
+# HACK: Client sent messages to register (h)
+echo "Register" >&4
+echo "Register" >&5
+echo "Register" >&6
+
+# DM messages
 echo "$MESSAGE_STR1" >&4
 echo "$MESSAGE_STR2" >&5
 
@@ -60,13 +66,12 @@ CONDITION1=$(grep "$MESSAGE_STR1" Client2.txt && grep "$MESSAGE_STR2" Client1.tx
 CONDITION2=$(grep "$MESSAGE_STR1" Client3.txt && grep "$MESSAGE_STR2" Client3.txt)
 
 # Check if all conditions are satisfied
-if [[ "$CONDITION1" != "" && "$CONDITION2" == ""]]; then
+if [[ "$CONDITION1" != "" && "$CONDITION2" == "" ]]; then
     echo "✅ Test 4: PASSED - All messages are present in all client logs"
     exit 0
 else
-    echo "❌ Test 4: FAILED - One or more messages are missing in the client logs"
-    echo "Condition 1 ($MESSAGE_STR1 in Client2 and Client3): $CONDITION1"
-    echo "Condition 2 ($MESSAGE_STR2 in Client1 and Client3): $CONDITION2"
-    echo "Condition 3 ($MESSAGE_STR3 in Client1 and Client2): $CONDITION3"
+    echo "❌ Test 4: FAILED - "
+    echo "Condition 1 (Messages in Client1 and Client2): $CONDITION1"
+    echo "Condition 2 (Messages not in Client3): $CONDITION2"
     exit 1
 fi
