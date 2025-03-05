@@ -1,5 +1,7 @@
 #!/bin/bash 
 
+SERVER=./server
+CLIENT=./client
 CLIENT_NAME="Gabe"
 SRV_OUTPUT="server.log"
 MESSAGE_STR="Test message"
@@ -8,7 +10,7 @@ MESSAGE_STR="Test message"
 rm -f ../$SRV_OUTPUT
 
 # Create server in the background
-./server &
+$SERVER &
 SERVER_PID=$! 
 echo "Server PID: $SERVER_PID" 
  
@@ -16,7 +18,7 @@ echo "Server PID: $SERVER_PID"
 sleep 2
  
 # Run the client with a 5-second timeout
-echo "$MESSAGE_STR" | timeout 5s ./client $CLIENT_NAME > /dev/null
+echo "$MESSAGE_STR" | timeout 5s $CLIENT $CLIENT_NAME > /dev/null
 
 # Wait a moment to ensure server processes the message
 sleep 1

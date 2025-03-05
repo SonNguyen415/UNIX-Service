@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SERVER=./server
+CLIENT=./client
 CLIENT_NAME1="Client1" 
 CLIENT_NAME2="Client2"
 SRV_OUTPUT="server.log"
@@ -14,18 +16,18 @@ rm -f pipe1 pipe2
 mkfifo pipe1 pipe2
 
 # Start server in the background
-./server &
+$SERVER &
 SERVER_PID=$! 
 echo "Server PID: $SERVER_PID"    
 sleep 1
 
 # Start first client using named pipe for input
-./client "$CLIENT_NAME1" < pipe1 &
+$CLIENT "$CLIENT_NAME1" < pipe1 &
 CLIENT1_PID=$!
 exec 4>pipe1  
 
 # Start second client using named pipe for input
-./client "$CLIENT_NAME2" < pipe2 &
+$CLIENT "$CLIENT_NAME2" < pipe2 &
 CLIENT2_PID=$!
 exec 5>pipe2  
 
