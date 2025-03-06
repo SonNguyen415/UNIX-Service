@@ -112,5 +112,5 @@ static inline int recv_fd(int socket) {
 static inline int register_user(int socket_desc, struct chat_message *msg) {
 	msg->content[0] = '\0';
 	msg->is_dm = 0;
-	return write(socket_desc, msg, sizeof(msg));
+	return write(socket_desc, msg, sizeof(struct chat_message));
 }

@@ -43,17 +43,7 @@ void *receive_messages(void *socket_ptr) {
 
     while (1) {
         if (read(socket_desc, &msg, sizeof(msg)) > 0) {
-            if (msg.is_dm == 2) {  // DM setup message
-                printf("Receiving DM setup from %s\n", msg.username);
-                int peer_fd = recv_fd(socket_desc);
-                if (peer_fd < 0) {
-                    perror("Failed to receive fd");
-                    continue;
-                }
-                printf("Received fd: %d for DM with %s\n", peer_fd, msg.username);
-                add_dm_connection(msg.username, peer_fd);
-                printf("Established DM connection with %s\n", msg.username);
-            } else if (msg.is_dm) {
+            if (msg.is_dm) {
                 printf("[DM] %s: %s\n", msg.username, msg.content);
             } else {
                 printf("%s: %s\n", msg.username, msg.content);
@@ -70,23 +60,18 @@ void parse_message(struct chat_message *msg, char *input) {
     
     if (input[0] == '@') {
         char *space = strchr(input, ' ');
-        if (space) {
+        if (space && (space - input) > 1) {  // Ensure there's a username
             int username_len = space - input - 1;
             strncpy(msg->target, input + 1, username_len);
             msg->target[username_len] = '\0';
-            strncpy(msg->content, space + 1, MAX_MSG_SIZE);
+            strncpy(msg->content, space + 1, MAX_MSG_SIZE - 1);
             msg->is_dm = 1;
-            
-            // Check if we already have a DM connection
-            int dm_fd = find_dm_fd(msg->target);
-            if (dm_fd != -1) {
-                // Send directly to peer
-                write(dm_fd, msg, sizeof(struct chat_message));
-                return;
-            }
+        } else {
+            strncpy(msg->content, "Invalid DM format. Use: @username message", MAX_MSG_SIZE - 1);
         }
+    } else {
+        strncpy(msg->content, input, MAX_MSG_SIZE - 1);
     }
-    strncpy(msg->content, input, MAX_MSG_SIZE);
 }
 
 int main(int argc, char *argv[]) {
@@ -107,7 +92,7 @@ int main(int argc, char *argv[]) {
     // Main thread handles sending messages, send an empty message first to register
     struct chat_message msg;
     strncpy(msg.username, argv[1], MAX_USERNAME - 1);
-    if (register_user(socket_desc, &msg) == - 1) {
+    if (register_user(socket_desc, &msg) == -1) {
         panic("Failed to register user");
     }
 

@@ -83,48 +83,37 @@ int find_user_socket(const char *username) {
 }
 
 void handle_message(struct chat_message *msg, int sender_fd) {
-    // If this is the first message from a client, update their username
+    // First message handling (username registration)
     for (int i = 0; i < num_clients; i++) {
         if (users[i].socket_fd == sender_fd && users[i].username[0] == '\0') {
             strncpy(users[i].username, msg->username, MAX_USERNAME - 1);
-            log_message("User %s registered with fd %d\n", msg->username, sender_fd);
-            break;
+            log_message("User %s registered with fd %d", msg->username, sender_fd);
+            return;  // Return after registration, ignore first message
         }
     }
 
     // If empty message, then don't bother
     if (msg->content[0] == '\0') return;
-        
+
     if (msg->is_dm) {
         int target_fd = find_user_socket(msg->target);
-        if (target_fd != -1) {
-            log_message("Setting up DM between %s and %s\n", msg->username, msg->target);
-            
-            // Send target's fd to sender
-            if (send_fd(sender_fd, target_fd) < 0) {
-                perror("Failed to send fd to sender");
-                return;
-            }
-            
-            // Send sender's fd to target
-            struct chat_message setup_msg = {0};
-            setup_msg.is_dm = 2;  // Special flag for DM setup
-            strncpy(setup_msg.username, msg->username, MAX_USERNAME - 1);
-            write(target_fd, &setup_msg, sizeof(setup_msg));
-            if (send_fd(target_fd, sender_fd) < 0) {
-                perror("Failed to send fd to target");
-                return;
-            }
-            
-            // Send the original message through the server this first time
-            write(target_fd, msg, sizeof(struct chat_message));
-            log_message("DM setup complete\n");
-        } else {
-            log_message("Target user %s not found\n", msg->target);
+        if (target_fd == -1) {
+            // User not found - send error message back to sender
+            struct chat_message error_msg = {0};
+            error_msg.is_dm = 1;
+            strncpy(error_msg.username, "SERVER", MAX_USERNAME - 1);
+            snprintf(error_msg.content, MAX_MSG_SIZE, "User '%s' is not online.", msg->target);
+            write(sender_fd, &error_msg, sizeof(error_msg));
+            log_message("Failed DM from %s to non-existent user %s", msg->username, msg->target);
+            return;
         }
+
+        // Send the DM directly to target
+        write(target_fd, msg, sizeof(struct chat_message));
+        log_message("DM from %s to %s: %s", msg->username, msg->target, msg->content);
     } else {
         // Regular broadcast
-        log_message("Broadcasting message from %s\n", msg->username);
+        log_message("Broadcasting message from %s: %s", msg->username, msg->content);
         for (int i = 0; i < num_clients; i++) {
             if (users[i].socket_fd != sender_fd) {
                 write(users[i].socket_fd, msg, sizeof(struct chat_message));
@@ -132,8 +121,6 @@ void handle_message(struct chat_message *msg, int sender_fd) {
         }
     }
 }
-
-
 
 int main(void) {
 
