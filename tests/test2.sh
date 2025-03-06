@@ -76,13 +76,34 @@ CONDITION2=$(awk '
     }
 ' "$SRV_OUTPUT")
 
-# Check if both conditions are satisfied
-if [[ "$CONDITION1" == "true" && "$CONDITION2" == "true" ]]; then
-    echo "✅ Test 2: PASSED - Both conditions satisfied"
+
+# Condition 3: Check if "New client connected!" lines are interleaved by "User Client1 registered with fd"
+CONDITION3=$(awk '
+    /New client connected!/ { 
+        if (prev == "New client connected!" && interleaved) { 
+            found = 1 
+        } 
+        prev = $0 
+        interleaved = 0 
+    } 
+    /User Client1 registered with fd/ { 
+        if (prev == "New client connected!") { 
+            interleaved = 1 
+        } 
+    } 
+    END { 
+        if (found) print "true"; else print "false" 
+    }
+' "$SRV_OUTPUT")
+
+# Check if conditions are satisfied
+if [[ ("$CONDITION1" == "true" || "$CONDITION3" == "true") && "$CONDITION2" == "true" ]]; then
+    echo "✅ Test 2: PASSED - Conditions satisfied"
     exit 0
 else
-    echo "❌ Test 2: FAILED - One or both conditions not satisfied"
+    echo "❌ Test 2: FAILED - Conditions not satisfied"
     echo "Condition 1 (Two consecutive 'New client connected!' lines): $CONDITION1"
     echo "Condition 2 ('Broadcasting message from Client2' before 'Broadcasting message from Client1'): $CONDITION2"
+    echo "Condition 3 (Interleaved 'New client connected!' with 'User Client1 registered with fd'): $CONDITION3"
     exit 1
 fi
