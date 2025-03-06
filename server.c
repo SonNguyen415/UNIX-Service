@@ -88,12 +88,12 @@ void handle_message(struct chat_message *msg, int sender_fd) {
     if (users[i].socket_fd == sender_fd && users[i].username[0] == '\0') {
       strncpy(users[i].username, msg->username, MAX_USERNAME - 1);
       log_message("User %s registered with fd %d", msg->username, sender_fd);
-      return; // Return after registration, ignore first message
+      return;
     }
   }
 
-  // If empty message or register message then don't broadcast
-  if (msg->content[0] == '\0' || !strncmp("Register", msg->content, 8))
+  // If empty message, then don't bother
+  if (msg->content[0] == '\0')
     return;
 
   if (msg->is_dm) {
@@ -111,10 +111,28 @@ void handle_message(struct chat_message *msg, int sender_fd) {
       return;
     }
 
-    // Send the DM directly to target
+    // Pass file descriptors between clients for direct communication
+    log_message("Setting up DM between %s and %s", msg->username, msg->target);
+
+    // Send target's fd to sender
+    if (send_fd(sender_fd, target_fd) < 0) {
+      log_message("Failed to send fd to sender");
+      return;
+    }
+
+    // Send sender's fd to target
+    struct chat_message setup_msg = {0};
+    setup_msg.is_dm = 2; // Special flag for DM setup
+    strncpy(setup_msg.username, msg->username, MAX_USERNAME - 1);
+    write(target_fd, &setup_msg, sizeof(setup_msg));
+    if (send_fd(target_fd, sender_fd) < 0) {
+      log_message("Failed to send fd to target");
+      return;
+    }
+
+    // Send the original message through the server this first time
     write(target_fd, msg, sizeof(struct chat_message));
-    log_message("DM from %s to %s: %s", msg->username, msg->target,
-                msg->content);
+    log_message("DM setup complete");
   } else {
     // Regular broadcast
     log_message("Broadcasting message from %s: %s", msg->username,
