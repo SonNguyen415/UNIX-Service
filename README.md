@@ -37,10 +37,10 @@ For example, see the [client](https://man7.org/tlpi/code/online/dist/sockets/ud_
 [] Use domain socket facilities to get a trustworthy identity of the client (i.e. user id).
 [x] Pass file descriptors between the service and the client.
 [x] Implement global chatroom between multiple clients.
-[] Implement DM services between multiple clients.
+[x] Implement DM services between multiple clients.
 
 ### If we have time
 [] Fix bug #1.
 [] Use network sockets for communication between different hosts.
-[] Remove our strcpy and change them to strncpy they bother my OCD.
+[x] Remove our strcpy and change them to strncpy they bother my OCD.
 [] Add more security???
