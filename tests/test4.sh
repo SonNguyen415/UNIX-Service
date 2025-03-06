@@ -7,8 +7,8 @@ SRV_OUTPUT="server.log"
 CLIENT=./test_client
 CLIENT_NAME1="Client1" 
 CLIENT_NAME2="Client2"
-MESSAGE_STR1="@$CLIENT_NAME2 Test message 1"
-MESSAGE_STR2="@$CLIENT_NAME1 Test message 2"
+MESSAGE_STR1="Test message 1"
+MESSAGE_STR2="Test message 2"
 
 # Clear logs
 rm -f "$SRV_OUTPUT"
@@ -46,8 +46,8 @@ echo "Register" >&5
 echo "Register" >&6
 
 # DM messages
-echo "$MESSAGE_STR1" >&4
-echo "$MESSAGE_STR2" >&5
+echo "@$CLIENT_NAME2 $MESSAGE_STR1" >&4
+echo "@$CLIENT_NAME1 $MESSAGE_STR2" >&5
 
 # Wait a moment to ensure server processes the messages
 sleep 1
@@ -70,11 +70,11 @@ CONDITION1=$(grep "$MESSAGE_STR1" Client2.txt && grep "$MESSAGE_STR2" Client1.tx
 CONDITION2=$(grep "$MESSAGE_STR1" Client3.txt && grep "$MESSAGE_STR2" Client3.txt)
 
 # Check if all conditions are satisfied
-if [[ "$LINES_CLIENT1" -eq 4 && "$LINES_CLIENT2" -eq 4 && "$CONDITION2" == "" ]]; then
-    echo "✅ Test 4: PASSED - All messages are present in all client logs"
+if [[ "$CONDITION1" != "" && "$CONDITION2" == "" ]]; then
+    echo "✅ Test 4: PASSED - Client1 and Client2 received messages, Client3 did not"
     exit 0
 else
-    echo "❌ Test 4: FAILED - "
+    echo "❌ Test 4: FAILED"
     echo "Condition 1 (Messages in Client1 and Client2): $CONDITION1"
     echo "Condition 2 (Messages not in Client3): $CONDITION2"
     exit 1
