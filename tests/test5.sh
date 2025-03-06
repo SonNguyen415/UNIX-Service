@@ -2,13 +2,13 @@
 
 SERVER=./server
 CLIENT=./test_client
-SRV_OUTPUT="server.log"
+SRV_LOG="server.log"
 MESSAGE_STR="Test message"
-MAX_CLIENTS=10  # Adjust this based on your server's MAX_CLIENTS setting
+MAX_CLIENTS=10  
 EXTRA_CLIENT_NAME="ExtraClient"
 
 # Clear logs
-rm -f $SRV_OUTPUT
+rm -f $SRV_LOG
 
 # Start the server in the background
 $SERVER &
@@ -42,28 +42,27 @@ kill $SERVER_PID
 wait $SERVER_PID 2>/dev/null
 
 # Check if all expected clients (MAX_CLIENTS) show up in the log
-PASSED=true
+CONDITION1=true
 for ((i=1; i<=MAX_CLIENTS; i++)); do
     CLIENT_NAME="Client$i"
-    if ! grep -q "$CLIENT_NAME" "$SRV_OUTPUT"; then
-        echo "❌ Test: Client $CLIENT_NAME did not appear in the log!"
-        PASSED=false
+    if ! grep -q "$CLIENT_NAME" "$SRV_LOG"; then
+        CONDITION1=false
     fi
 done
 
 # Check if the extra client was rejected (it should not be in the log)
-if grep -q "$EXTRA_CLIENT_NAME" "$SRV_OUTPUT"; then
-    echo "❌ Test: Extra client $EXTRA_CLIENT_NAME was incorrectly accepted!"
-    PASSED=false
-else
-    echo "✅ Test: Extra client $EXTRA_CLIENT_NAME was correctly rejected!"
+CONDITION2=true
+if grep -q "$EXTRA_CLIENT_NAME" "$SRV_LOG"; then
+    CONDITION2=false
 fi
 
 # Report final result
-if [ "$PASSED" = true ]; then
-    echo "✅ Test 5: PASSED"
+if [[ $CONDITION1 = true && $CONDITION2 = true ]]; then
+    echo "✅ Test 5: PASSED - Server rejects client more than max"
     exit 0
 else
     echo "❌ Test 5: FAILED"
+    echo "All clients within limit connected successfully: $CONDITION1"
+    echo "Extra client was rejected: $CONDITION2"
     exit 1
 fi

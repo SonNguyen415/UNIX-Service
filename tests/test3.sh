@@ -1,18 +1,19 @@
 #!/bin/bash
 
 SERVER=./server
-CLIENT_NAME3="Client3"
-SRV_OUTPUT="server.log"
+SRV_LOG="server.log"
 
 CLIENT=./test_client
 CLIENT_NAME1="Client1" 
 CLIENT_NAME2="Client2"
+CLIENT_NAME3="Client3"
+
 MESSAGE_STR1="Test message 1"
 MESSAGE_STR2="Test message 2"
 MESSAGE_STR3="Test message 3"
 
 # Clear logs
-rm -f "$SRV_OUTPUT"
+rm -f "$SRV_LOG"
 
 # Create named pipes for input
 rm -f pipe1 pipe2 pipe3
@@ -58,13 +59,13 @@ kill "$SERVER_PID"
 wait "$SERVER_PID" 2>/dev/null
 
 # Check if all messages are in the client logs
-CONDITION1=$(grep "$MESSAGE_STR1" Client2.txt && grep "$MESSAGE_STR1" Client3.txt)
-CONDITION2=$(grep "$MESSAGE_STR2" Client1.txt && grep "$MESSAGE_STR2" Client3.txt)
-CONDITION3=$(grep "$MESSAGE_STR3" Client1.txt && grep "$MESSAGE_STR3" Client2.txt)
+CONDITION1=$(grep "$MESSAGE_STR1" $CLIENT_NAME2.txt && grep "$MESSAGE_STR1" $CLIENT_NAME3.txt)
+CONDITION2=$(grep "$MESSAGE_STR2" $CLIENT_NAME1.txt && grep "$MESSAGE_STR2" $CLIENT_NAME3.txt)
+CONDITION3=$(grep "$MESSAGE_STR3" $CLIENT_NAME1.txt && grep "$MESSAGE_STR3" $CLIENT_NAME2.txt)
 
 
 # Check if all conditions are satisfied
-if [[ "$CONDITION1" != "" && "$CONDITION2" != "" && "$CONDITION3" != "" ]]; then
+if [[ $CONDITION1 != "" && $CONDITION2 != "" && $CONDITION3 != "" ]]; then
     echo "✅ Test 3: PASSED - All messages are present in all client logs"
     exit 0
 else

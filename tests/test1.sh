@@ -3,11 +3,11 @@
 SERVER=./server
 CLIENT=./test_client
 CLIENT_NAME="Client1"
-SRV_OUTPUT="server.log"
+SRV_LOG="server.log"
 MESSAGE_STR="Test message"
 
 # Clear logs
-rm -f ../$SRV_OUTPUT
+rm -f ../$SRV_LOG
 
 # Create server in the background
 $SERVER &
@@ -30,10 +30,10 @@ kill $SERVER_PID
 wait $SERVER_PID 2>/dev/null
 
 # Check if the client name shows up in the server log
-if grep -q "$CLIENT_NAME" "$SRV_OUTPUT"; then
-    echo "✅ Test 1: PASSED"
+if grep -q "$CLIENT_NAME" "$SRV_LOG"; then
+    echo "✅ Test 1: PASSED - Client connected successfully to server"
     exit 0
 else
-    echo "❌ Test 1: FAILED"
+    echo "❌ Test 1: FAILED - Client cannot connect to server"
     exit 1
 fi

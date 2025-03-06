@@ -1,12 +1,13 @@
 #!/bin/bash
 
 SERVER=./server
-CLIENT_NAME3="Client3"
 SRV_OUTPUT="server.log"
 
 CLIENT=./test_client
 CLIENT_NAME1="Client1" 
 CLIENT_NAME2="Client2"
+CLIENT_NAME3="Client3"
+
 MESSAGE_STR1="Test message 1"
 MESSAGE_STR2="Test message 2"
 
@@ -61,16 +62,12 @@ kill "$SERVER_PID"
 # Wait for the server to terminate 
 wait "$SERVER_PID" 2>/dev/null
 
-# Count lines in each log file
-LINES_CLIENT1=$(wc -l < Client1.txt)
-LINES_CLIENT2=$(wc -l < Client2.txt)
-
 # Check if messages are in client1 and client2 but not client3
-CONDITION1=$(grep "$MESSAGE_STR1" Client2.txt && grep "$MESSAGE_STR2" Client1.txt)
-CONDITION2=$(grep "$MESSAGE_STR1" Client3.txt && grep "$MESSAGE_STR2" Client3.txt)
+CONDITION1=$(grep "$MESSAGE_STR1" $CLIENT_NAME2.txt && grep "$MESSAGE_STR2" $CLIENT_NAME1.txt)
+CONDITION2=$(grep "$MESSAGE_STR1" $CLIENT_NAME3.txt && grep "$MESSAGE_STR2" $CLIENT_NAME3.txt)
 
 # Check if all conditions are satisfied
-if [[ "$CONDITION1" != "" && "$CONDITION2" == "" ]]; then
+if [[ $CONDITION1 != "" && $CONDITION2 == "" ]]; then
     echo "✅ Test 4: PASSED - Client1 and Client2 received messages, Client3 did not"
     exit 0
 else

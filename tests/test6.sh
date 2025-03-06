@@ -2,13 +2,13 @@
 
 SERVER=./server
 CLIENT=./test_client
-SRV_OUTPUT="server.log"
+SRV_LOG="server.log"
 MESSAGE_STR="Test message"
 CLIENT_NAME="DMClient"
 FAKE_CLIENT_NAME="FakeClient"
 
 # Clear logs
-rm -f $SRV_OUTPUT
+rm -f $SRV_LOG
 
 # Start the server in the background
 $SERVER &
@@ -32,20 +32,21 @@ kill $SERVER_PID
 # Wait for the server to terminate
 wait $SERVER_PID 2>/dev/null
 
-# Check if the message is in the log
-PASSED=false
-if grep "User '$FAKE_CLIENT_NAME' is not online" "${CLIENT_NAME}.txt"; then
-    PASSED=true
+CONDITION1=false
+if grep -q "User '$FAKE_CLIENT_NAME' is not online" "$CLIENT_NAME.txt"; then
+    CONDITION1=true
 fi
 
-CONDITION1=$(grep "User '$FAKE_CLIENT_NAME' is not online" $CLIENT_NAME.txt)
-CONDITION2=$(grep "Failed DM" $SRV_OUTPUT)
+CONDITION2=false
+if grep -q "Failed DM" "$SRV_LOG"; then
+    CONDITION2=true
+fi
 
 # Report final result
-if [ "$PASSED" = true ]; then
-    echo "✅ Test 6: PASSED"
+if [[ $CONDITION1 = true && $CONDITION2 = true ]]; then
+    echo "✅ Test 6: PASSED - Client failed to send DM to offline user"
     exit 0
 else
-    echo "❌ Test 6: FAILED"
+    echo "❌ Test 6: FAILED - Client sent DM to offline user"
     exit 1
 fi
