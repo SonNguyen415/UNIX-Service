@@ -3,9 +3,9 @@
 SERVER=./server
 CLIENT=./test_client
 SRV_OUTPUT="server.log"
-MESSAGE_STR="Test DM message"
-MAX_DM_CONNECTIONS=3  # Adjust this based on your server's MAX_DM_CONNECTIONS setting
-EXTRA_DM_CLIENT_NAME="ExtraDMClient"
+MESSAGE_STR="Test message"
+CLIENT_NAME="DMClient"
+FAKE_CLIENT_NAME="FakeClient"
 
 # Clear logs
 rm -f $SRV_OUTPUT
@@ -18,46 +18,28 @@ echo "Server PID: $SERVER_PID"
 # Give the server some time to start
 sleep 2
 
-# Establish MAX_DM_CONNECTIONS direct message connections
-for ((i=1; i<=MAX_DM_CONNECTIONS; i++)); do
-    CLIENT_NAME="DMClient$i"
-    echo "$MESSAGE_STR to DMClient$i" | timeout 5s $CLIENT $CLIENT_NAME --dm > /dev/null &
-    CLIENT_PIDS[$i]=$!
-done
+# Start a client for DM
+(echo "@$FAKE_CLIENT_NAME $MESSAGE_STR"; sleep 5) | $CLIENT "$CLIENT_NAME" &
+CLIENT_PID=$!
 
-# Give the server time to process the DM connections
+# Give the server some time to process the clients
 sleep 2
 
-# Attempt to establish one extra direct message connection beyond MAX_DM_CONNECTIONS
-echo "$MESSAGE_STR to ExtraDMClient" | timeout 5s $CLIENT $EXTRA_DM_CLIENT_NAME --dm > /dev/null &
-EXTRA_DM_CLIENT_PID=$!
-
-# Allow time for the extra DM connection to be processed
-sleep 2
-
-# Kill the server
+# Kill everyone
+kill $CLIENT_PID
 kill $SERVER_PID
 
 # Wait for the server to terminate
 wait $SERVER_PID 2>/dev/null
 
-# Check if all expected DM clients appear in the log
-PASSED=true
-for ((i=1; i<=MAX_DM_CONNECTIONS; i++)); do
-    CLIENT_NAME="DMClient$i"
-    if ! grep -q "$CLIENT_NAME" "$SRV_OUTPUT"; then
-        # echo "❌ Test: DM connection from $CLIENT_NAME did not appear in the log!"
-        PASSED=false
-    fi
-done
-
-# Check if the extra DM connection was rejected (it should NOT be in the log)
-if grep -q "$EXTRA_DM_CLIENT_NAME" "$SRV_OUTPUT"; then
-    # echo "❌ Test: Extra DM connection from $EXTRA_DM_CLIENT_NAME was incorrectly accepted!"
-    PASSED=false
-# else
-#     echo "✅ Test: Extra DM connection from $EXTRA_DM_CLIENT_NAME was correctly rejected!"
+# Check if the message is in the log
+PASSED=false
+if grep "User '$FAKE_CLIENT_NAME' is not online" "${CLIENT_NAME}.txt"; then
+    PASSED=true
 fi
+
+CONDITION1=$(grep "User '$FAKE_CLIENT_NAME' is not online" $CLIENT_NAME.txt)
+CONDITION2=$(grep "Failed DM" $SRV_OUTPUT)
 
 # Report final result
 if [ "$PASSED" = true ]; then
