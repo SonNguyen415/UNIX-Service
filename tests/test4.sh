@@ -61,12 +61,16 @@ kill "$SERVER_PID"
 # Wait for the server to terminate 
 wait "$SERVER_PID" 2>/dev/null
 
+# Count lines in each log file
+LINES_CLIENT1=$(wc -l < Client1.txt)
+LINES_CLIENT2=$(wc -l < Client2.txt)
+
 # Check if messages are in client1 and client2 but not client3
 CONDITION1=$(grep "$MESSAGE_STR1" Client2.txt && grep "$MESSAGE_STR2" Client1.txt)
 CONDITION2=$(grep "$MESSAGE_STR1" Client3.txt && grep "$MESSAGE_STR2" Client3.txt)
 
 # Check if all conditions are satisfied
-if [[ "$CONDITION1" != "" && "$CONDITION2" == "" ]]; then
+if [[ "$LINES_CLIENT1" -eq 4 && "$LINES_CLIENT2" -eq 4 && "$CONDITION2" == "" ]]; then
     echo "✅ Test 4: PASSED - All messages are present in all client logs"
     exit 0
 else

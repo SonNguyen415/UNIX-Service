@@ -14,7 +14,7 @@ SOCKET = chat_socket
 TEST_DIR = tests
 TESTS = $(sort $(wildcard $(TEST_DIR)/test*.sh))  # Ensures files are sorted
 
-all: $(SERVER_BIN) $(CLIENT_BIN)
+all: $(SERVER_BIN) $(CLIENT_BIN) $(TEST_BIN)
 
 test: $(SERVER_BIN) $(TEST_BIN)
 	@make --no-print-directory run_tests
