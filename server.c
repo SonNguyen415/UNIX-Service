@@ -92,8 +92,8 @@ void handle_message(struct chat_message *msg, int sender_fd) {
         }
     }
 
-    // If empty message, then don't bother
-    if (msg->content[0] == '\0') return;
+    // If empty message or register message then don't broadcast
+    if (msg->content[0] == '\0' || !strncmp("Register", msg->content, 8)) return;
 
     if (msg->is_dm) {
         int target_fd = find_user_socket(msg->target);
