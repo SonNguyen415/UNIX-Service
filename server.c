@@ -7,9 +7,11 @@
 #include <assert.h>
 #include <sys/epoll.h>
 #include <fcntl.h>
+#include <stdarg.h>
 
 #define MAX_EVENTS 10
 #define MAX_CLIENTS 10
+#define LOG_FILE "server.log"
 
 struct user_info {
     char username[MAX_USERNAME];
@@ -19,6 +21,29 @@ struct user_info {
 struct user_info users[MAX_CLIENTS];
 
 int num_clients = 0;
+
+void log_message(const char *format, ...) {
+    // Open file in append mode
+    FILE *log_file = fopen(LOG_FILE, "a");
+        if (!log_file) {
+        perror("Error opening log file for writing");
+        return;
+    }
+    
+    // Create a va_list to handle variable arguments
+    va_list args;
+    va_start(args, format);
+    
+    // Use vfprintf to process variable arguments like log_message
+    vfprintf(log_file, format, args);
+    if (format[strlen(format) - 1] != '\n') {
+        fprintf(log_file, "\n");
+    }
+    
+    // Clean up the va_list and close the file
+    va_end(args);
+    fclose(log_file);
+}
 
 void set_nonblocking(int sock) {
     int flags = fcntl(sock, F_GETFL, 0);
@@ -62,15 +87,18 @@ void handle_message(struct chat_message *msg, int sender_fd) {
     for (int i = 0; i < num_clients; i++) {
         if (users[i].socket_fd == sender_fd && users[i].username[0] == '\0') {
             strncpy(users[i].username, msg->username, MAX_USERNAME - 1);
-            printf("User %s registered with fd %d\n", msg->username, sender_fd);
+            log_message("User %s registered with fd %d\n", msg->username, sender_fd);
             break;
         }
     }
 
+    // If empty message, then don't bother
+    if (msg->content[0] == '\0') return;
+        
     if (msg->is_dm) {
         int target_fd = find_user_socket(msg->target);
         if (target_fd != -1) {
-            printf("Setting up DM between %s and %s\n", msg->username, msg->target);
+            log_message("Setting up DM between %s and %s\n", msg->username, msg->target);
             
             // Send target's fd to sender
             if (send_fd(sender_fd, target_fd) < 0) {
@@ -90,13 +118,13 @@ void handle_message(struct chat_message *msg, int sender_fd) {
             
             // Send the original message through the server this first time
             write(target_fd, msg, sizeof(struct chat_message));
-            printf("DM setup complete\n");
+            log_message("DM setup complete\n");
         } else {
-            printf("Target user %s not found\n", msg->target);
+            log_message("Target user %s not found\n", msg->target);
         }
     } else {
         // Regular broadcast
-        printf("Broadcasting message from %s\n", msg->username);
+        log_message("Broadcasting message from %s\n", msg->username);
         for (int i = 0; i < num_clients; i++) {
             if (users[i].socket_fd != sender_fd) {
                 write(users[i].socket_fd, msg, sizeof(struct chat_message));
@@ -105,7 +133,18 @@ void handle_message(struct chat_message *msg, int sender_fd) {
     }
 }
 
+
+
 int main(void) {
+
+    // Create a log
+    FILE *log_file = fopen(LOG_FILE, "w");
+    if (!log_file) {
+        perror("Failed to open log file");
+        return -1;
+    }
+    fclose(log_file);
+
     char *ds = "chat_socket";
     int socket_desc, epoll_fd;
     struct epoll_event event, events[MAX_EVENTS];
@@ -118,7 +157,7 @@ int main(void) {
         if (socket_desc < 0) panic("server domain socket creation");
     }
 
-    printf("Chat server is running...\n");
+    log_message("Chat server is running...\n");
 
     /* Handle multiple clients sequentially */
     /* TODO: Liza change this to handle clients concurrently*/
@@ -148,7 +187,7 @@ int main(void) {
                 epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event);
                 add_client(client_fd, "");
                 
-                printf("New client connected!\n");
+                log_message("New client connected!\n");
             } else {
                 // Existing client sent data
                 int client_fd = events[i].data.fd;
@@ -159,7 +198,7 @@ int main(void) {
                     // Client disconnected
                     remove_client(client_fd);
                     close(client_fd);
-                    printf("Client disconnected\n");
+                    log_message("Client disconnected\n");
                 } else {
                     // Broadcast message to all other clients
                     handle_message(&msg, client_fd);
@@ -171,7 +210,7 @@ int main(void) {
     close(socket_desc);
     close(epoll_fd);
     unlink(ds);
-    printf("Chat server shutting down...\n");
+    log_message("Chat server shutting down...\n");
 
     return 0;
 }

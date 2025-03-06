@@ -13,6 +13,11 @@
 # VSCode specific files
 .vscode
 
+# Txt and log files
+*.txt
+*.log
+
+
 # Object files
 *.ko
 *.obj

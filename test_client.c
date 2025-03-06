@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdarg.h>
 
 struct dm_connection {
     char username[MAX_USERNAME];
@@ -14,6 +15,30 @@ struct dm_connection {
 #define MAX_DM_CONNECTIONS 10
 struct dm_connection dm_connections[MAX_DM_CONNECTIONS];
 int num_dm_connections = 0;
+char output_name[MAX_USERNAME + 20];
+
+void log_message(const char *format, ...) {
+    // Open file in append mode
+    FILE *output_file = fopen(output_name, "a");
+        if (!output_file) {
+        perror("Error opening log file for writing");
+        return;
+    }
+    
+    // Create a va_list to handle variable arguments
+    va_list args;
+    va_start(args, format);
+    
+    // Use vfprintf to process variable arguments like log_message
+    vfprintf(output_file, format, args);
+    if (format[strlen(format) - 1] != '\n') {
+        fprintf(output_file, "\n");
+    }
+    
+    // Clean up the va_list and close the file
+    va_end(args);
+    fclose(output_file);
+}
 
 void add_dm_connection(const char *username, int fd) {
     if (num_dm_connections < MAX_DM_CONNECTIONS) {
@@ -44,19 +69,19 @@ void *receive_messages(void *socket_ptr) {
     while (1) {
         if (read(socket_desc, &msg, sizeof(msg)) > 0) {
             if (msg.is_dm == 2) {  // DM setup message
-                printf("Receiving DM setup from %s\n", msg.username);
+                log_message("Receiving DM setup from %s\n", msg.username);
                 int peer_fd = recv_fd(socket_desc);
                 if (peer_fd < 0) {
                     perror("Failed to receive fd");
                     continue;
                 }
-                printf("Received fd: %d for DM with %s\n", peer_fd, msg.username);
+                log_message("Received fd: %d for DM with %s\n", peer_fd, msg.username);
                 add_dm_connection(msg.username, peer_fd);
-                printf("Established DM connection with %s\n", msg.username);
+                log_message("Established DM connection with %s\n", msg.username);
             } else if (msg.is_dm) {
-                printf("[DM] %s: %s\n", msg.username, msg.content);
+                log_message("[DM] %s: %s\n", msg.username, msg.content);
             } else {
-                printf("%s: %s\n", msg.username, msg.content);
+                log_message("%s: %s\n", msg.username, msg.content);
             }
         } else {
             break;  // Connection closed or error
@@ -74,7 +99,7 @@ void parse_message(struct chat_message *msg, char *input) {
             int username_len = space - input - 1;
             strncpy(msg->target, input + 1, username_len);
             msg->target[username_len] = '\0';
-            strncpy(msg->content, space + 1, MAX_MSG_SIZE);
+            strcpy(msg->content, space + 1);
             msg->is_dm = 1;
             
             // Check if we already have a DM connection
@@ -86,7 +111,7 @@ void parse_message(struct chat_message *msg, char *input) {
             }
         }
     }
-    strncpy(msg->content, input, MAX_MSG_SIZE);
+    strcpy(msg->content, input);
 }
 
 int main(int argc, char *argv[]) {
@@ -104,14 +129,21 @@ int main(int argc, char *argv[]) {
         panic("Failed to create receive thread");
     }
 
-    // Main thread handles sending messages, send an empty message first to register
+    // Main thread handles sending messages
     struct chat_message msg;
     strncpy(msg.username, argv[1], MAX_USERNAME - 1);
-    if (register_user(socket_desc, &msg) == - 1) {
-        panic("Failed to register user");
-    }
 
-    printf("Connected to chat. Type your messages:\n");
+    // Create output file
+    strncpy(output_name, argv[1], MAX_USERNAME - 1);
+    strncat(output_name, ".txt", 5);
+    FILE *output_file = fopen(output_name, "w");
+    if (!output_file) {
+        perror("Failed to open log file");
+        return -1;
+    }
+    fclose(output_file);
+
+    log_message("Connected to chat. Type your messages:\n");
     while (1) {
         char input[MAX_MSG_SIZE];
         if (fgets(input, MAX_MSG_SIZE, stdin) == NULL) break;
