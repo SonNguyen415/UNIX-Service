@@ -17,6 +17,9 @@
 *.txt
 *.log
 
+/* Socket files */
+chat_socket
+
 
 # Object files
 *.ko

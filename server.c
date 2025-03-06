@@ -66,9 +66,9 @@ void add_client(int client_fd, const char *username) {
 void remove_client(int client_fd) {
     for (int i = 0; i < num_clients; i++) {
         if (users[i].socket_fd == client_fd) {
+            log_message("Removing user %s with fd %d", users[i].username, client_fd);
             users[i] = users[num_clients - 1];
             num_clients--;
-            break;
         }
     }
 }
@@ -165,6 +165,11 @@ int main(void) {
         for (int i = 0; i < n; i++) {
             if (events[i].data.fd == socket_desc) {
                 // New connection
+                if(num_clients >= MAX_CLIENTS) {
+                    log_message("Max clients reached, rejecting new connection");
+                    continue;
+                }
+
                 int client_fd = accept(socket_desc, NULL, NULL);
                 if (client_fd == -1) continue;
                 
@@ -173,8 +178,6 @@ int main(void) {
                 event.events = EPOLLIN;
                 epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event);
                 add_client(client_fd, "");
-                
-                log_message("New client connected!\n");
             } else {
                 // Existing client sent data
                 int client_fd = events[i].data.fd;

@@ -4,7 +4,7 @@ SERVER=./server
 CLIENT=./test_client
 SRV_OUTPUT="server.log"
 MESSAGE_STR="Test message"
-MAX_CLIENTS=5  # Adjust this based on your server's MAX_CLIENTS setting
+MAX_CLIENTS=10  # Adjust this based on your server's MAX_CLIENTS setting
 EXTRA_CLIENT_NAME="ExtraClient"
 
 # Clear logs
@@ -21,7 +21,7 @@ sleep 2
 # Start MAX_CLIENTS clients
 for ((i=1; i<=MAX_CLIENTS; i++)); do
     CLIENT_NAME="Client$i"
-    echo "$MESSAGE_STR" | timeout 5s $CLIENT $CLIENT_NAME > /dev/null &
+    (echo "$MESSAGE_STR"; sleep 5) | $CLIENT "$CLIENT_NAME" > /dev/null &
     CLIENT_PIDS[$i]=$!
 done
 
@@ -29,7 +29,7 @@ done
 sleep 2
 
 # Attempt to connect one extra client beyond MAX_CLIENTS
-echo "$MESSAGE_STR" | timeout 5s $CLIENT $EXTRA_CLIENT_NAME > /dev/null &
+echo "$MESSAGE_STR" | timeout 1s $CLIENT $EXTRA_CLIENT_NAME > /dev/null &
 EXTRA_CLIENT_PID=$!
 
 # Wait a moment to ensure the extra client attempts to connect
