@@ -88,13 +88,14 @@ void handle_message(struct chat_message *msg, int sender_fd) {
     if (users[i].socket_fd == sender_fd && users[i].username[0] == '\0') {
       strncpy(users[i].username, msg->username, MAX_USERNAME - 1);
       log_message("User %s registered with fd %d", msg->username, sender_fd);
-      return;
+      return;  // Return after registration, don't process empty message
     }
   }
 
   // If empty message, then don't bother
-  if (msg->content[0] == '\0')
-    return;
+  if (msg->content[0] == '\0') {
+    return;  // Don't process empty messages at all
+  }
 
   if (msg->is_dm) {
     int target_fd = find_user_socket(msg->target);
