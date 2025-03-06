@@ -178,6 +178,7 @@ int main(void) {
                 event.events = EPOLLIN;
                 epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event);
                 add_client(client_fd, "");
+                log_message("New client connected\n");
             } else {
                 // Existing client sent data
                 int client_fd = events[i].data.fd;

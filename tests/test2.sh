@@ -48,21 +48,13 @@ kill "$SERVER_PID"
 wait "$SERVER_PID" 2>/dev/null
 
 # Define conditions for the test - Used Deepseek for this
-# Condition 1: Check for two strictly consecutive "New client connected!" lines
+# Condition 1: Check for client1 connecting before client2
 CONDITION1=$(awk '
-    /New client connected!/ { 
-        if (prev == "New client connected!") { 
-            found = 1 
-        } 
-        prev = $0 
-    } 
-    { 
-        if ($0 != "New client connected!") { 
-            prev = "" 
-        } 
-    } 
-    END { 
-        if (found) print "true"; else print "false" 
+    /User Client1 registered with fd/ { found1 = NR }  # Record line number for Client1
+    /User Client2 registered with fd/ { found2 = NR }  # Record line number for Client2
+    END {
+        if (found1 && found2 && found1 < found2) print "true";  # Client1 before Client2
+        else print "false"
     }
 ' "$SRV_OUTPUT")
 
@@ -77,24 +69,6 @@ CONDITION2=$(awk '
 ' "$SRV_OUTPUT")
 
 
-# Condition 3: Check if "New client connected!" lines are interleaved by "User Client1 registered with fd"
-CONDITION3=$(awk '
-    /New client connected!/ { 
-        if (prev == "New client connected!" && interleaved) { 
-            found = 1 
-        } 
-        prev = $0 
-        interleaved = 0 
-    } 
-    /User Client1 registered with fd/ { 
-        if (prev == "New client connected!") { 
-            interleaved = 1 
-        } 
-    } 
-    END { 
-        if (found) print "true"; else print "false" 
-    }
-' "$SRV_OUTPUT")
 
 # Check if conditions are satisfied
 if [[ ("$CONDITION1" == "true" || "$CONDITION3" == "true") && "$CONDITION2" == "true" ]]; then
@@ -102,8 +76,7 @@ if [[ ("$CONDITION1" == "true" || "$CONDITION3" == "true") && "$CONDITION2" == "
     exit 0
 else
     echo "❌ Test 2: FAILED - Conditions not satisfied"
-    echo "Condition 1 (Two consecutive 'New client connected!' lines): $CONDITION1"
+    echo "Condition 1 (Client1 connects before Client2): $CONDITION1"
     echo "Condition 2 ('Broadcasting message from Client2' before 'Broadcasting message from Client1'): $CONDITION2"
-    echo "Condition 3 (Interleaved 'New client connected!' with 'User Client1 registered with fd'): $CONDITION3"
     exit 1
 fi

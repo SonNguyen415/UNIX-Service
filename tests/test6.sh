@@ -46,17 +46,17 @@ PASSED=true
 for ((i=1; i<=MAX_DM_CONNECTIONS; i++)); do
     CLIENT_NAME="DMClient$i"
     if ! grep -q "$CLIENT_NAME" "$SRV_OUTPUT"; then
-        echo "❌ Test: DM connection from $CLIENT_NAME did not appear in the log!"
+        # echo "❌ Test: DM connection from $CLIENT_NAME did not appear in the log!"
         PASSED=false
     fi
 done
 
 # Check if the extra DM connection was rejected (it should NOT be in the log)
 if grep -q "$EXTRA_DM_CLIENT_NAME" "$SRV_OUTPUT"; then
-    echo "❌ Test: Extra DM connection from $EXTRA_DM_CLIENT_NAME was incorrectly accepted!"
+    # echo "❌ Test: Extra DM connection from $EXTRA_DM_CLIENT_NAME was incorrectly accepted!"
     PASSED=false
-else
-    echo "✅ Test: Extra DM connection from $EXTRA_DM_CLIENT_NAME was correctly rejected!"
+# else
+#     echo "✅ Test: Extra DM connection from $EXTRA_DM_CLIENT_NAME was correctly rejected!"
 fi
 
 # Report final result
