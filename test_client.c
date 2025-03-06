@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <stdarg.h>
-
+#include <logging.h>
 struct dm_connection {
     char username[MAX_USERNAME];
     int fd;
@@ -15,30 +14,6 @@ struct dm_connection {
 #define MAX_DM_CONNECTIONS 10
 struct dm_connection dm_connections[MAX_DM_CONNECTIONS];
 int num_dm_connections = 0;
-char output_name[MAX_USERNAME + 20];
-
-void log_message(const char *format, ...) {
-    // Open file in append mode
-    FILE *output_file = fopen(output_name, "a");
-        if (!output_file) {
-        perror("Error opening log file for writing");
-        return;
-    }
-    
-    // Create a va_list to handle variable arguments
-    va_list args;
-    va_start(args, format);
-    
-    // Use vfprintf to process variable arguments like log_message
-    vfprintf(output_file, format, args);
-    if (format[strlen(format) - 1] != '\n') {
-        fprintf(output_file, "\n");
-    }
-    
-    // Clean up the va_list and close the file
-    va_end(args);
-    fclose(output_file);
-}
 
 void add_dm_connection(const char *username, int fd) {
     if (num_dm_connections < MAX_DM_CONNECTIONS) {
@@ -68,17 +43,7 @@ void *receive_messages(void *socket_ptr) {
 
     while (1) {
         if (read(socket_desc, &msg, sizeof(msg)) > 0) {
-            if (msg.is_dm == 2) {  // DM setup message
-                log_message("Receiving DM setup from %s\n", msg.username);
-                int peer_fd = recv_fd(socket_desc);
-                if (peer_fd < 0) {
-                    perror("Failed to receive fd");
-                    continue;
-                }
-                log_message("Received fd: %d for DM with %s\n", peer_fd, msg.username);
-                add_dm_connection(msg.username, peer_fd);
-                log_message("Established DM connection with %s\n", msg.username);
-            } else if (msg.is_dm) {
+            if (msg.is_dm) {
                 log_message("[DM] %s: %s\n", msg.username, msg.content);
             } else {
                 log_message("%s: %s\n", msg.username, msg.content);
@@ -95,23 +60,18 @@ void parse_message(struct chat_message *msg, char *input) {
     
     if (input[0] == '@') {
         char *space = strchr(input, ' ');
-        if (space) {
+        if (space && (space - input) > 1) {  // Ensure there's a username
             int username_len = space - input - 1;
             strncpy(msg->target, input + 1, username_len);
             msg->target[username_len] = '\0';
-            strcpy(msg->content, space + 1);
+            strncpy(msg->content, space + 1, MAX_MSG_SIZE - 1);
             msg->is_dm = 1;
-            
-            // Check if we already have a DM connection
-            int dm_fd = find_dm_fd(msg->target);
-            if (dm_fd != -1) {
-                // Send directly to peer
-                write(dm_fd, msg, sizeof(struct chat_message));
-                return;
-            }
+        } else {
+            strncpy(msg->content, "Invalid DM format. Use: @username message", MAX_MSG_SIZE - 1);
         }
+    } else {
+        strncpy(msg->content, input, MAX_MSG_SIZE - 1);
     }
-    strcpy(msg->content, input);
 }
 
 int main(int argc, char *argv[]) {
@@ -129,19 +89,15 @@ int main(int argc, char *argv[]) {
         panic("Failed to create receive thread");
     }
 
-    // Main thread handles sending messages
+    // Main thread handles sending messages, send an empty message first to register
     struct chat_message msg;
     strncpy(msg.username, argv[1], MAX_USERNAME - 1);
-
-    // Create output file
-    strncpy(output_name, argv[1], MAX_USERNAME - 1);
-    strncat(output_name, ".txt", 5);
-    FILE *output_file = fopen(output_name, "w");
-    if (!output_file) {
-        perror("Failed to open log file");
-        return -1;
+    if (register_user(socket_desc, &msg) == -1) {
+        panic("Failed to register user");
     }
-    fclose(output_file);
+    
+    // Create output file
+    create_file(argv[1]);
 
     log_message("Connected to chat. Type your messages:\n");
     while (1) {
