@@ -1,5 +1,5 @@
 # UNIX-Service Chat Room 
-Our goal for this project was to implement global chatroom between multiple client and to implement DM services between multiple clients. We have also implemented private user direct messaging.
+Our goal for this project was to implement global chatroom between multiple clients and to implement private DM services between multiple clients. 
 
 ## Using our Chatroom
 1. Compile our files using `make`
