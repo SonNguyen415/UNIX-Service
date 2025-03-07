@@ -8,8 +8,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <pwd.h>
+#include <string.h>
+
+// Define ucred structure if not defined
+struct ucred {
+    pid_t pid;    /* Process ID of the sending process */
+    uid_t uid;    /* User ID of the sending process */
+    gid_t gid;    /* Group ID of the sending process */
+};
 
 // Max message size
 #define MAX_MSG_SIZE 1024
@@ -23,6 +33,38 @@ struct chat_message {
   char target[MAX_USERNAME]; // Target username for DMs, empty for broadcast
   int is_dm;                 // Flag to indicate if this is a DM
 };
+
+// Structure to hold client credentials
+struct client_credentials {
+    uid_t uid;          // User ID
+    gid_t gid;          // Group ID
+    pid_t pid;          // Process ID
+    char username[256]; // System username
+};
+
+// Function to get client credentials
+static inline int get_client_credentials(int socket_fd, struct client_credentials *cred) {
+    struct ucred ucred;
+    socklen_t len = sizeof(struct ucred);
+    
+    if (getsockopt(socket_fd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1) {
+        return -1;
+    }
+
+    cred->uid = ucred.uid;
+    cred->gid = ucred.gid;
+    cred->pid = ucred.pid;
+
+    // Get system username from uid
+    struct passwd *pw = getpwuid(ucred.uid);
+    if (pw) {
+        strncpy(cred->username, pw->pw_name, sizeof(cred->username) - 1);
+    } else {
+        snprintf(cred->username, sizeof(cred->username), "%d", ucred.uid);
+    }
+
+    return 0;
+}
 
 // Create a client socket
 static inline int domain_socket_client_create(const char *file_name) {

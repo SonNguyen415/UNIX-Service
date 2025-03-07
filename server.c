@@ -8,6 +8,7 @@
 #include <sys/epoll.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <stdlib.h>  // For EXIT_FAILURE and exit()
 
 #define MAX_EVENTS 10
 #define MAX_CLIENTS 10
@@ -16,6 +17,8 @@
 struct user_info {
   char username[MAX_USERNAME];
   int socket_fd;
+  uid_t uid;          // Add user ID
+  char sys_username[256]; // Add system username
 };
 
 struct user_info users[MAX_CLIENTS];
@@ -57,8 +60,19 @@ void panic(char *msg) {
 
 void add_client(int client_fd, const char *username) {
   if (num_clients < MAX_CLIENTS) {
+    struct client_credentials cred;
+    if (get_client_credentials(client_fd, &cred) == -1) {
+      log_message("Failed to get credentials for client");
+      return;
+    }
+
     strncpy(users[num_clients].username, username, MAX_USERNAME - 1);
     users[num_clients].socket_fd = client_fd;
+    users[num_clients].uid = cred.uid;
+    strncpy(users[num_clients].sys_username, cred.username, sizeof(users[num_clients].sys_username) - 1);
+    
+    log_message("User %s (system user: %s, uid: %d) connected", 
+               username, cred.username, cred.uid);
     num_clients++;
   }
 }
@@ -83,6 +97,28 @@ int find_user_socket(const char *username) {
 }
 
 void handle_message(struct chat_message *msg, int sender_fd) {
+  // Verify sender's identity
+  struct client_credentials cred;
+  if (get_client_credentials(sender_fd, &cred) == -1) {
+    log_message("Failed to verify sender credentials");
+    return;
+  }
+
+  // Find the sender's user_info
+  int sender_idx = -1;
+  for (int i = 0; i < num_clients; i++) {
+    if (users[i].socket_fd == sender_fd) {
+      sender_idx = i;
+      break;
+    }
+  }
+
+  // Verify that the UID hasn't changed (which would indicate tampering)
+  if (sender_idx != -1 && users[sender_idx].uid != cred.uid) {
+    log_message("Security warning: UID mismatch for user %s", users[sender_idx].username);
+    return;
+  }
+
   // First message handling (username registration)
   for (int i = 0; i < num_clients; i++) {
     if (users[i].socket_fd == sender_fd && users[i].username[0] == '\0') {
