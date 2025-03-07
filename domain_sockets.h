@@ -1,5 +1,5 @@
 #pragma once
-
+#define _GNU_SOURCE
 /*
  * Graciously taken from
  * https://github.com/troydhanson/network/tree/master/unixdomain
@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <stdlib.h>
+#include "scm_multi.h"
 
 // Max message size
 #define MAX_MSG_SIZE 1024
@@ -23,16 +24,69 @@ struct chat_message {
 	char target[MAX_USERNAME];  // Target username for DMs, empty for broadcast
 	int is_dm;                 // Flag to indicate if this is a DM
 };
-
 // Create a client socket
 static inline int
 domain_socket_client_create(const char *file_name)
 {
+	// Adapted from slides 
+	
+
+	pid_t pid = getpid();
+	uid_t uid = getuid();
+	gid_t gid = getgid();
+
+	size_t fdAllocSize = sizeof(int);
+	size_t controlMsgSize = CMSG_SPACE(fdAllocSize) + CMSG_SPACE(sizeof(struct ucred));
+	char *controlMsg = malloc(controlMsgSize);
+	if (controlMsg == NULL)
+		return NULL;
+	
+	memset(controlMsg,0, controlMsgSize);
+
+	struct msghdr msgh;
+    msgh.msg_name = NULL;
+    msgh.msg_namelen = 0;
+
+	msgh.msg_control = controlMsg;
+    msgh.msg_controllen = controlMsgSize;
+
+	struct cmsghdr *cmsgp = CMSG_FIRSTHDR(&msgh);
+	cmsgp->cmsg_level = SOL_SOCKET;
+    cmsgp->cmsg_type = SCM_RIGHTS;
+
+	cmsgp->cmsg_len = CMSG_LEN(fdAllocSize);
+    //printf("cmsg_len 1: %ld\n", (long) cmsgp->cmsg_len);
+
+	//int *fdList = malloc(fdAllocSize);
+
+
+	//open the fd 
 	struct sockaddr_un addr;
 	int fd;
 
 	/* Create the socket descriptor.  */
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) return -1;
+
+	//copy it into the message to send.
+	memcpy(CMSG_DATA(cmsgp), fd, fdAllocSize);
+
+	//copy credentials
+	cmsgp = CMSG_NXTHDR(&msgh, cmsgp);
+    cmsgp->cmsg_level = SOL_SOCKET;
+    cmsgp->cmsg_type = SCM_CREDENTIALS;
+
+	//add space for ucred
+	cmsgp->cmsg_len = CMSG_LEN(sizeof(struct ucred));
+
+	struct ucred creds;
+	creds.pid = pid;
+	creds.uid = uid;
+    creds.gid = gid;
+
+	//copy creds
+	memcpy(CMSG_DATA(cmsgp), &creds, sizeof(struct ucred));
+
+
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
@@ -41,6 +95,9 @@ domain_socket_client_create(const char *file_name)
 	/* Attempt to connect the socket descriptor with a socket file named `file_name`. */
 	if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) return -1;
 
+	ssize_t ns = sendmsg(fd, &msgh, 0);
+    if (ns == -1)
+		return -1;
 	return fd;
 }
 
@@ -48,6 +105,8 @@ domain_socket_client_create(const char *file_name)
 static inline int
 domain_socket_server_create(const char *file_name)
 {
+
+
 	struct sockaddr_un addr;
 	int fd;
 
@@ -100,6 +159,14 @@ static inline int recv_fd(int socket) {
 	msg.msg_iovlen = 1;
 	msg.msg_control = buf;
 	msg.msg_controllen = sizeof(buf);
+
+	size_t controlMsgSize = CMSG_SPACE(sizeof(int[MAX_FDS])) +
+	CMSG_SPACE(sizeof(struct ucred));
+	char *controlMsg = malloc(controlMsgSize);
+	if (controlMsg == NULL)
+		return -1;
+
+
 
 	if (recvmsg(socket, &msg, 0) < 0) return -1;
 
