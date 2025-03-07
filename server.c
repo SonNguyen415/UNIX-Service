@@ -59,20 +59,23 @@ void panic(char *msg) {
 }
 
 void add_client(int client_fd, const char *username) {
-  if (num_clients < MAX_CLIENTS) {
-    struct client_credentials cred;
-    if (get_client_credentials(client_fd, &cred) == -1) {
-      log_message("Failed to get credentials for client");
-      return;
-    }
+  struct client_credentials cred;
+  
+  // Get and verify client credentials
+  if (get_client_credentials(client_fd, &cred) == -1) {
+    log_message("Failed to get credentials for client");
+    return;
+  }
 
+  // Log the real identity of the connecting client
+  log_message("New connection from user %s (system user: %s, uid: %d, pid: %d)", 
+             username, cred.username, cred.uid, cred.pid);
+
+  if (num_clients < MAX_CLIENTS) {
     strncpy(users[num_clients].username, username, MAX_USERNAME - 1);
     users[num_clients].socket_fd = client_fd;
     users[num_clients].uid = cred.uid;
     strncpy(users[num_clients].sys_username, cred.username, sizeof(users[num_clients].sys_username) - 1);
-    
-    log_message("User %s (system user: %s, uid: %d) connected", 
-               username, cred.username, cred.uid);
     num_clients++;
   }
 }
@@ -97,14 +100,14 @@ int find_user_socket(const char *username) {
 }
 
 void handle_message(struct chat_message *msg, int sender_fd) {
-  // Verify sender's identity
+  // Verify sender's credentials haven't changed
   struct client_credentials cred;
   if (get_client_credentials(sender_fd, &cred) == -1) {
     log_message("Failed to verify sender credentials");
     return;
   }
 
-  // Find the sender's user_info
+  // Find sender in our users array
   int sender_idx = -1;
   for (int i = 0; i < num_clients; i++) {
     if (users[i].socket_fd == sender_fd) {
@@ -113,9 +116,10 @@ void handle_message(struct chat_message *msg, int sender_fd) {
     }
   }
 
-  // Verify that the UID hasn't changed (which would indicate tampering)
+  // Verify UID matches
   if (sender_idx != -1 && users[sender_idx].uid != cred.uid) {
-    log_message("Security warning: UID mismatch for user %s", users[sender_idx].username);
+    log_message("Security warning: UID mismatch for user %s", 
+               users[sender_idx].username);
     return;
   }
 

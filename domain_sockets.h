@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <pwd.h>
 #include <string.h>
+#define _GNU_SOURCE   // Needed for SCM_CREDENTIALS
 
 // Define ucred structure if not defined
 struct ucred {
@@ -44,23 +45,24 @@ struct client_credentials {
 
 // Function to get client credentials
 static inline int get_client_credentials(int socket_fd, struct client_credentials *cred) {
-    struct ucred ucred;
+    struct ucred peer_cred;
     socklen_t len = sizeof(struct ucred);
     
-    if (getsockopt(socket_fd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1) {
+    // Use SO_PEERCRED to get credentials
+    if (getsockopt(socket_fd, SOL_SOCKET, SO_PEERCRED, &peer_cred, &len) == -1) {
         return -1;
     }
 
-    cred->uid = ucred.uid;
-    cred->gid = ucred.gid;
-    cred->pid = ucred.pid;
+    cred->uid = peer_cred.uid;
+    cred->gid = peer_cred.gid;
+    cred->pid = peer_cred.pid;
 
-    // Get system username from uid
-    struct passwd *pw = getpwuid(ucred.uid);
+    // Get system username
+    struct passwd *pw = getpwuid(peer_cred.uid);
     if (pw) {
         strncpy(cred->username, pw->pw_name, sizeof(cred->username) - 1);
     } else {
-        snprintf(cred->username, sizeof(cred->username), "%d", ucred.uid);
+        snprintf(cred->username, sizeof(cred->username), "%d", peer_cred.uid);
     }
 
     return 0;
