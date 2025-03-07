@@ -44,20 +44,25 @@ void *receive_messages(void *socket_ptr) {
 
   while (1) {
     if (read(socket_desc, &msg, sizeof(msg)) > 0) {
-      // Skip empty messages and only show valid messages
-      if (msg.content[0] != '\0') {
-        // Check for non-empty content
+      if (msg.is_dm == 2) {  // DM setup message
+        int peer_fd = recv_fd(socket_desc);
+        if (peer_fd < 0) {
+          log_message("Failed to set up direct messaging with %s\n", msg.username);
+          continue;
+        }
+        log_message("[DM Setup] Direct chat with %s established!\n", msg.username);
+        
+        // Store the fd for future direct communication
+        add_dm_connection(msg.username, peer_fd);
+      } else if (msg.content[0] != '\0') { 
         if (msg.is_dm) {
-          // Only show if we have a valid username
-          if (msg.username[0] != '\0') {
-            log_message("[DM] %s: %s\n", msg.username, msg.content);
-          }
+          log_message("[DM] %s: %s\n", msg.username, msg.content);
         } else {
           log_message("%s: %s\n", msg.username, msg.content);
         }
       }
     } else {
-      break;  // Connection closed or error
+      break;
     }
   }
   return NULL;
@@ -89,6 +94,14 @@ void parse_message(struct chat_message *msg, char *input) {
 
       strncpy(msg->content, space + 1, MAX_MSG_SIZE - 1);
       msg->is_dm = 1;
+  
+      // Check if we already have a direct connection
+      int dm_fd = find_dm_fd(msg->target);
+      if (dm_fd != -1) {
+        // Send directly to peer
+        write(dm_fd, msg, sizeof(struct chat_message));
+        return;
+      }
       return;  // Valid DM, return
     } else {
       // Invalid DM format, just print locally and don't send
