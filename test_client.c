@@ -50,9 +50,6 @@ void *receive_messages(void *socket_ptr) {
           log_message("Failed to set up direct messaging with %s\n", msg.username);
           continue;
         }
-        log_message("[DM Setup] Direct chat with %s established!\n", msg.username);
-        
-        // Store the fd for future direct communication
         add_dm_connection(msg.username, peer_fd);
       } else if (msg.content[0] != '\0') { 
         if (msg.is_dm) {

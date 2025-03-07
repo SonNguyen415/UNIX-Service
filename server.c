@@ -112,18 +112,15 @@ void handle_message(struct chat_message *msg, int sender_fd) {
       return;
     }
 
-    // Pass file descriptors between clients for direct communication
-    log_message("Setting up DM between %s and %s", msg->username, msg->target);
-
-    // Send target's fd to sender
+    // Pass file descriptors between clients
     if (send_fd(sender_fd, target_fd) < 0) {
       log_message("Failed to send fd to sender");
       return;
     }
-
-    // Send sender's fd to target
+    
+    // Send setup message and fd to target
     struct chat_message setup_msg = {0};
-    setup_msg.is_dm = 2; // Special flag for DM setup
+    setup_msg.is_dm = 2;  // DM setup flag
     strncpy(setup_msg.username, msg->username, MAX_USERNAME - 1);
     write(target_fd, &setup_msg, sizeof(setup_msg));
     if (send_fd(target_fd, sender_fd) < 0) {

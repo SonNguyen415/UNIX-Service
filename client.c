@@ -47,12 +47,9 @@ void *receive_messages(void *socket_ptr) {
       if (msg.is_dm == 2) {  // DM setup message
         int peer_fd = recv_fd(socket_desc);
         if (peer_fd < 0) {
-          printf("Failed to set up direct messaging with %s\n", msg.username);
+          printf("Failed to set up direct messaging\n");
           continue;
         }
-        printf("[DM Setup] Direct chat with %s established!\n", msg.username);
-        
-        // Store the fd for future direct communication
         add_dm_connection(msg.username, peer_fd);
       } else if (msg.content[0] != '\0') { 
         if (msg.is_dm) {
