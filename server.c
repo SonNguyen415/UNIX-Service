@@ -4,11 +4,11 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h> // For EXIT_FAILURE and exit()
 #include <string.h>
 #include <sys/epoll.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <stdlib.h>  // For EXIT_FAILURE and exit()
 
 #define MAX_EVENTS 10
 #define MAX_CLIENTS 10
@@ -17,7 +17,7 @@
 struct user_info {
   char username[MAX_USERNAME];
   int socket_fd;
-  uid_t uid;          // Add user ID
+  uid_t uid;              // Add user ID
   char sys_username[256]; // Add system username
 };
 
@@ -60,7 +60,7 @@ void panic(char *msg) {
 
 void add_client(int client_fd, const char *username) {
   struct client_credentials cred;
-  
+
   // Get and verify client credentials
   if (get_client_credentials(client_fd, &cred) == -1) {
     log_message("Failed to get credentials for client");
@@ -68,14 +68,15 @@ void add_client(int client_fd, const char *username) {
   }
 
   // Log the real identity of the connecting client
-  log_message("New connection from user %s (system user: %s, uid: %d, pid: %d)", 
-             username, cred.username, cred.uid, cred.pid);
+  log_message("New connection from user %s (system user: %s, uid: %d, pid: %d)",
+              username, cred.username, cred.uid, cred.pid);
 
   if (num_clients < MAX_CLIENTS) {
     strncpy(users[num_clients].username, username, MAX_USERNAME - 1);
     users[num_clients].socket_fd = client_fd;
     users[num_clients].uid = cred.uid;
-    strncpy(users[num_clients].sys_username, cred.username, sizeof(users[num_clients].sys_username) - 1);
+    strncpy(users[num_clients].sys_username, cred.username,
+            sizeof(users[num_clients].sys_username) - 1);
     num_clients++;
   }
 }
@@ -118,8 +119,8 @@ void handle_message(struct chat_message *msg, int sender_fd) {
 
   // Verify UID matches
   if (sender_idx != -1 && users[sender_idx].uid != cred.uid) {
-    log_message("Security warning: UID mismatch for user %s", 
-               users[sender_idx].username);
+    log_message("Security warning: UID mismatch for user %s",
+                users[sender_idx].username);
     return;
   }
 
@@ -128,13 +129,13 @@ void handle_message(struct chat_message *msg, int sender_fd) {
     if (users[i].socket_fd == sender_fd && users[i].username[0] == '\0') {
       strncpy(users[i].username, msg->username, MAX_USERNAME - 1);
       log_message("User %s registered with fd %d", msg->username, sender_fd);
-      return;  // Return after registration, don't process empty message
+      return; // Return after registration, don't process empty message
     }
   }
 
   // If empty message, then don't bother
   if (msg->content[0] == '\0') {
-    return;  // Don't process empty messages at all
+    return; // Don't process empty messages at all
   }
 
   if (msg->is_dm) {
@@ -157,10 +158,10 @@ void handle_message(struct chat_message *msg, int sender_fd) {
       log_message("Failed to send fd to sender");
       return;
     }
-    
+
     // Send setup message and fd to target
     struct chat_message setup_msg = {0};
-    setup_msg.is_dm = 2;  // DM setup flag
+    setup_msg.is_dm = 2; // DM setup flag
     strncpy(setup_msg.username, msg->username, MAX_USERNAME - 1);
     write(target_fd, &setup_msg, sizeof(setup_msg));
     if (send_fd(target_fd, sender_fd) < 0) {

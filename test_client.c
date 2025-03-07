@@ -44,14 +44,15 @@ void *receive_messages(void *socket_ptr) {
 
   while (1) {
     if (read(socket_desc, &msg, sizeof(msg)) > 0) {
-      if (msg.is_dm == 2) {  // DM setup message
+      if (msg.is_dm == 2) { // DM setup message
         int peer_fd = recv_fd(socket_desc);
         if (peer_fd < 0) {
-          log_message("Failed to set up direct messaging with %s\n", msg.username);
+          log_message("Failed to set up direct messaging with %s\n",
+                      msg.username);
           continue;
         }
         add_dm_connection(msg.username, peer_fd);
-      } else if (msg.content[0] != '\0') { 
+      } else if (msg.content[0] != '\0') {
         if (msg.is_dm) {
           log_message("[DM] %s: %s\n", msg.username, msg.content);
         } else {
@@ -70,8 +71,9 @@ void parse_message(struct chat_message *msg, char *input) {
 
   // Check message length first
   if (strlen(input) >= MAX_MSG_SIZE - 1) {
-    log_message("Message too long. Maximum length is %d characters\n", MAX_MSG_SIZE - 1);
-    msg->content[0] = '\0';  // Empty message won't be sent
+    log_message("Message too long. Maximum length is %d characters\n",
+                MAX_MSG_SIZE - 1);
+    msg->content[0] = '\0'; // Empty message won't be sent
     return;
   }
 
@@ -81,17 +83,17 @@ void parse_message(struct chat_message *msg, char *input) {
       int username_len = space - input - 1;
       strncpy(msg->target, input + 1, username_len);
       msg->target[username_len] = '\0';
-      
+
       // Check if trying to DM yourself
       if (strcmp(msg->target, msg->username) == 0) {
         log_message("Cannot send DM to yourself\n");
-        msg->content[0] = '\0';  // Empty message won't be sent
+        msg->content[0] = '\0'; // Empty message won't be sent
         return;
       }
 
       strncpy(msg->content, space + 1, MAX_MSG_SIZE - 1);
       msg->is_dm = 1;
-  
+
       // Check if we already have a direct connection
       int dm_fd = find_dm_fd(msg->target);
       if (dm_fd != -1) {
@@ -99,11 +101,11 @@ void parse_message(struct chat_message *msg, char *input) {
         write(dm_fd, msg, sizeof(struct chat_message));
         return;
       }
-      return;  // Valid DM, return
+      return; // Valid DM, return
     } else {
       // Invalid DM format, just print locally and don't send
       log_message("Invalid DM format. Use: @username message\n");
-      msg->content[0] = '\0';  // Empty message won't be sent
+      msg->content[0] = '\0'; // Empty message won't be sent
       return;
     }
   }

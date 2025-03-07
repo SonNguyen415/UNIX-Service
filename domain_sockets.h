@@ -5,21 +5,21 @@
  * https://github.com/troydhanson/network/tree/master/unixdomain
  */
 
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <pwd.h>
-#include <string.h>
-#define _GNU_SOURCE   // Needed for SCM_CREDENTIALS
+#define _GNU_SOURCE // Needed for SCM_CREDENTIALS
 
 // Define ucred structure if not defined
 struct ucred {
-    pid_t pid;    /* Process ID of the sending process */
-    uid_t uid;    /* User ID of the sending process */
-    gid_t gid;    /* Group ID of the sending process */
+  pid_t pid; /* Process ID of the sending process */
+  uid_t uid; /* User ID of the sending process */
+  gid_t gid; /* Group ID of the sending process */
 };
 
 // Max message size
@@ -37,35 +37,36 @@ struct chat_message {
 
 // Structure to hold client credentials
 struct client_credentials {
-    uid_t uid;          // User ID
-    gid_t gid;          // Group ID
-    pid_t pid;          // Process ID
-    char username[256]; // System username
+  uid_t uid;          // User ID
+  gid_t gid;          // Group ID
+  pid_t pid;          // Process ID
+  char username[256]; // System username
 };
 
 // Function to get client credentials
-static inline int get_client_credentials(int socket_fd, struct client_credentials *cred) {
-    struct ucred peer_cred;
-    socklen_t len = sizeof(struct ucred);
-    
-    // Use SO_PEERCRED to get credentials
-    if (getsockopt(socket_fd, SOL_SOCKET, SO_PEERCRED, &peer_cred, &len) == -1) {
-        return -1;
-    }
+static inline int get_client_credentials(int socket_fd,
+                                         struct client_credentials *cred) {
+  struct ucred peer_cred;
+  socklen_t len = sizeof(struct ucred);
 
-    cred->uid = peer_cred.uid;
-    cred->gid = peer_cred.gid;
-    cred->pid = peer_cred.pid;
+  // Use SO_PEERCRED to get credentials
+  if (getsockopt(socket_fd, SOL_SOCKET, SO_PEERCRED, &peer_cred, &len) == -1) {
+    return -1;
+  }
 
-    // Get system username
-    struct passwd *pw = getpwuid(peer_cred.uid);
-    if (pw) {
-        strncpy(cred->username, pw->pw_name, sizeof(cred->username) - 1);
-    } else {
-        snprintf(cred->username, sizeof(cred->username), "%d", peer_cred.uid);
-    }
+  cred->uid = peer_cred.uid;
+  cred->gid = peer_cred.gid;
+  cred->pid = peer_cred.pid;
 
-    return 0;
+  // Get system username
+  struct passwd *pw = getpwuid(peer_cred.uid);
+  if (pw) {
+    strncpy(cred->username, pw->pw_name, sizeof(cred->username) - 1);
+  } else {
+    snprintf(cred->username, sizeof(cred->username), "%d", peer_cred.uid);
+  }
+
+  return 0;
 }
 
 // Create a client socket
