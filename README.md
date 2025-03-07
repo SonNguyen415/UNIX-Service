@@ -16,9 +16,9 @@ To run our tests type and enter `make test` into the terminal and this will run 
 - Test 2: Concurrency test, 1 client makes no request for a few seconds, the other then connect and make requests.
 - Test 3: Broadcast test, 3 clients connect, each client sends a message. Message should be seen by all 3 clients.
 - Test 4: DM test. 3 clients connect, client A DM to client B, client C should not see message.
-- Test 5: Test what happens if more clients than MAX_CLIENTS attempt to connect.
-- Test 6: Test what happens if user tries to send a DM to an offline user.
-- Test 7: Test what happens if a client dm with an invalid id.
+- Test 5: Test if more clients than MAX_CLIENTS attempt to connect.
+- Test 6: Test if user tries to send a DM to an offline user.
+- Test 7: Test if a client dms with an invalid id.
 
 ## Known Bugs
 1. Because of lack of UI, when you receive a message in the middle of writing your own, the received message interleave in your current message. Low priority because this seems to be client side functionality.
