@@ -4,10 +4,10 @@ Our goal for this project was to implement global chatroom between multiple clie
 ## Using our Chatroom
 1. Compile our files using `make`
 2. run `./client` and `./server <desired_username>` in seperate terminals
-   a. Can run `./client <desired_username>` in multiple seperate terminals with different users
-   b. To globally message every simply type `<desired_message>` into the terminal and hit send.
+3. run `./client <desired_username>` in multiple seperate terminals with different users
+4. To globally message every simply type `<desired_message>` into the terminal and hit send.
       <img width="400" alt="Screenshot 2025-03-06 at 7 14 37 PM" src="https://github.com/user-attachments/assets/c8557ff8-4809-4e1c-9931-667155f71516" />
-   c. To privately direct message type `@<username> <desired_message>`
+5. To privately direct message type `@<username> <desired_message>`
   <img width="357" alt="Screenshot 2025-03-06 at 7 12 54 PM" src="https://github.com/user-attachments/assets/5470e574-2702-406e-ba90-b8bc17676516" />
 
 ## Tests
