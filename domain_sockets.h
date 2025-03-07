@@ -14,6 +14,7 @@
 
 // Max message size
 #define MAX_MSG_SIZE 1024
+#define BUF_SIZE 100
 // Max username length
 #define MAX_USERNAME 32
 
@@ -39,7 +40,7 @@ domain_socket_client_create(const char *file_name)
 	size_t controlMsgSize = CMSG_SPACE(fdAllocSize) + CMSG_SPACE(sizeof(struct ucred));
 	char *controlMsg = malloc(controlMsgSize);
 	if (controlMsg == NULL)
-		return NULL;
+		return -1;
 	
 	memset(controlMsg,0, controlMsgSize);
 
@@ -68,7 +69,7 @@ domain_socket_client_create(const char *file_name)
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) return -1;
 
 	//copy it into the message to send.
-	memcpy(CMSG_DATA(cmsgp), fd, fdAllocSize);
+	memcpy(CMSG_DATA(cmsgp), &fd, fdAllocSize);
 
 	//copy credentials
 	cmsgp = CMSG_NXTHDR(&msgh, cmsgp);
@@ -149,16 +150,16 @@ static inline int send_fd(int socket, int fd_to_send) {
 
 // Receive a file descriptor over a socket
 static inline int recv_fd(int socket) {
-	struct msghdr msg = {0};
+	struct msghdr msgh = {0};
 	struct cmsghdr *cmsg;
 	char buf[CMSG_SPACE(sizeof(int))] = {0};
 	struct iovec io = { .iov_base = "", .iov_len = 1 };
 	int fd;
 
-	msg.msg_iov = &io;
-	msg.msg_iovlen = 1;
-	msg.msg_control = buf;
-	msg.msg_controllen = sizeof(buf);
+	msgh.msg_iov = &io;
+	msgh.msg_iovlen = 1;
+	msgh.msg_control = buf;
+	msgh.msg_controllen = sizeof(buf);
 
 	size_t controlMsgSize = CMSG_SPACE(sizeof(int[MAX_FDS])) +
 	CMSG_SPACE(sizeof(struct ucred));
@@ -168,9 +169,139 @@ static inline int recv_fd(int socket) {
 
 
 
-	if (recvmsg(socket, &msg, 0) < 0) return -1;
+	if (recvmsg(socket, &msgh, 0) < 0) return -1;
 
-	cmsg = CMSG_FIRSTHDR(&msg);
+	for (struct cmsghdr *cmsgp = CMSG_FIRSTHDR(&msgh); cmsgp != NULL; cmsgp = CMSG_NXTHDR(&msgh, cmsgp)) {
+
+		printf("=================================\n");
+		printf("cmsg_len: %ld\n", (long) cmsgp->cmsg_len);
+
+		/* Check that 'cmsg_level' is as expected */
+
+			if (cmsgp->cmsg_level != SOL_SOCKET)
+				return -1;
+
+			switch (cmsgp->cmsg_type) {
+
+			case SCM_RIGHTS:        /* Header containing file descriptors */
+
+			printf("SCM_RIGHTS: ");
+
+			/* The number of file descriptors is the size of the control
+				message block minus the size that would be allocated for
+				a zero-length data block (i.e., the size of the 'cmsghdr'
+				structure plus padding), divided by the size of a file
+				descriptor */
+
+			int fdCnt = (cmsgp->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+			printf("received %d file descriptors\n", fdCnt);
+
+			/* Allocate an array to hold the received file descriptors,
+				and copy file descriptors from cmsg into array */
+
+			int *fdList;
+			size_t fdAllocSize = sizeof(int) * fdCnt;
+			fdList = malloc(fdAllocSize);
+			if (fdList == NULL){
+				return -1;
+			}
+			memcpy(fdList, CMSG_DATA(cmsgp), fdAllocSize);
+
+			/* For each of the received file descriptors, display the file
+				descriptor number and read and display the file content */
+
+				for (struct cmsghdr *cmsgp = CMSG_FIRSTHDR(&msgh);
+				cmsgp != NULL;
+				cmsgp = CMSG_NXTHDR(&msgh, cmsgp)) {
+
+		printf("=================================\n");
+		printf("cmsg_len: %ld\n", (long) cmsgp->cmsg_len);
+
+		/* Check that 'cmsg_level' is as expected */
+
+		if (cmsgp->cmsg_level != SOL_SOCKET)
+			return -1; //fatal("cmsg_level != SOL_SOCKET");
+
+		switch (cmsgp->cmsg_type) {
+
+		case SCM_RIGHTS:        /* Header containing file descriptors */
+
+			printf("SCM_RIGHTS: ");
+
+			/* The number of file descriptors is the size of the control
+				message block minus the size that would be allocated for
+				a zero-length data block (i.e., the size of the 'cmsghdr'
+				structure plus padding), divided by the size of a file
+				descriptor */
+
+			int fdCnt = (cmsgp->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+			printf("received %d file descriptors\n", fdCnt);
+
+			/* Allocate an array to hold the received file descriptors,
+				and copy file descriptors from cmsg into array */
+
+			int *fdList;
+			size_t fdAllocSize = sizeof(int) * fdCnt;
+			fdList = malloc(fdAllocSize);
+			if (fdList == NULL)
+				return -1; //errExit("calloc");
+
+			memcpy(fdList, CMSG_DATA(cmsgp), fdAllocSize);
+
+			/* For each of the received file descriptors, display the file
+				descriptor number and read and display the file content */
+
+			for (int j = 0; j < fdCnt; j++) {
+				printf("--- [%d] Received FD %d\n", j, fdList[j]);
+
+				for (;;) {
+					char buf[BUF_SIZE];
+					ssize_t numRead;
+
+					numRead = read(fdList[j], buf, BUF_SIZE);
+					if (numRead == -1)
+						return -1; //errExit("read");
+
+					if (numRead == 0)
+						break;
+
+					write(STDOUT_FILENO, buf, numRead);
+				}
+
+				if (close(fdList[j]) == -1)
+					return -1; //errExit("close");
+			}
+			break;
+
+		case SCM_CREDENTIALS:   /* Header containing credentials */
+
+			/* Check validity of the 'cmsghdr' */
+
+			if (cmsgp->cmsg_len != CMSG_LEN(sizeof(struct ucred)))
+				return -1; //fatal("cmsg data has incorrect size");
+
+			/* The data in this control message block is a 'struct ucred' */
+
+			struct ucred creds;
+			memcpy(&creds, CMSG_DATA(cmsgp), sizeof(struct ucred));
+			printf("SCM_CREDENTIALS: pid=%ld, uid=%ld, gid=%ld\n",
+						(long) creds.pid, (long) creds.uid, (long) creds.gid);
+			break;
+
+		default:
+			return -1; //fatal("Bad cmsg_type (%d)", cmsgp->cmsg_type);
+	}
+}
+
+
+
+
+
+
+
+
+
+	cmsg = CMSG_FIRSTHDR(&msgh);
 	fd = *((int *) CMSG_DATA(cmsg));
 	return fd;
 }
