@@ -47,8 +47,6 @@ void *receive_messages(void *socket_ptr) {
       if (msg.is_dm == 2) { // DM setup message
         int peer_fd = recv_fd(socket_desc);
         if (peer_fd < 0) {
-          log_message("Failed to set up direct messaging with %s\n",
-                      msg.username);
           continue;
         }
         add_dm_connection(msg.username, peer_fd);

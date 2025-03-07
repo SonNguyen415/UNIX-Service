@@ -1,11 +1,11 @@
 #include "domain_sockets.h"
 #include <errno.h>
+#include <logging.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 struct dm_connection {
   char username[MAX_USERNAME];
   int fd;
@@ -47,7 +47,6 @@ void *receive_messages(void *socket_ptr) {
       if (msg.is_dm == 2) { // DM setup message
         int peer_fd = recv_fd(socket_desc);
         if (peer_fd < 0) {
-          printf("Failed to set up direct messaging\n");
           continue;
         }
         add_dm_connection(msg.username, peer_fd);
@@ -67,6 +66,14 @@ void *receive_messages(void *socket_ptr) {
 
 void parse_message(struct chat_message *msg, char *input) {
   msg->is_dm = 0;
+
+  // Check message length first
+  if (strlen(input) >= MAX_MSG_SIZE - 1) {
+    printf("Message too long. Maximum length is %d characters\n",
+                MAX_MSG_SIZE - 1);
+    msg->content[0] = '\0'; // Empty message won't be sent
+    return;
+  }
 
   if (input[0] == '@') {
     char *space = strchr(input, ' ');
