@@ -153,11 +153,6 @@ void handle_message(struct chat_message *msg, int sender_fd) {
       return;
     }
 
-    // Pass file descriptors between clients
-    if (send_fd(sender_fd, target_fd) < 0) {
-      log_message("Failed to send fd to sender");
-      return;
-    }
 
     // Send setup message and fd to target
     struct chat_message setup_msg = {0};

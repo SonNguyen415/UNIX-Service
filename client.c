@@ -45,11 +45,13 @@ void *receive_messages(void *socket_ptr) {
   while (1) {
     if (read(socket_desc, &msg, sizeof(msg)) > 0) {
       if (msg.is_dm == 2) { // DM setup message
-        int peer_fd = recv_fd(socket_desc);
-        if (peer_fd < 0) {
-          continue;
-        }
-        add_dm_connection(msg.username, peer_fd);
+        if (strlen(msg.username) > 0) {
+                    int peer_fd = recv_fd(socket_desc);
+                    if (peer_fd < 0) {
+                        continue;
+                    }
+                    add_dm_connection(msg.username, peer_fd);
+                }
       } else if (msg.content[0] != '\0') {
         if (msg.is_dm) {
           printf("[DM] %s: %s\n", msg.username, msg.content);
@@ -64,7 +66,7 @@ void *receive_messages(void *socket_ptr) {
   return NULL;
 }
 
-void parse_message(struct chat_message *msg, char *input) {
+int parse_message(struct chat_message *msg, char *input) {
   msg->is_dm = 0;
 
   // Check message length first
@@ -72,7 +74,7 @@ void parse_message(struct chat_message *msg, char *input) {
     printf("Message too long. Maximum length is %d characters\n",
                 MAX_MSG_SIZE - 1);
     msg->content[0] = '\0'; // Empty message won't be sent
-    return;
+    return 1;
   }
 
   if (input[0] == '@') {
@@ -86,7 +88,7 @@ void parse_message(struct chat_message *msg, char *input) {
       if (strcmp(msg->target, msg->username) == 0) {
         printf("Cannot send DM to yourself\n");
         msg->content[0] = '\0'; // Empty message won't be sent
-        return;
+        return 1;
       }
 
       strncpy(msg->content, space + 1, MAX_MSG_SIZE - 1);
@@ -97,18 +99,19 @@ void parse_message(struct chat_message *msg, char *input) {
       if (dm_fd != -1) {
         // Send directly to peer
         write(dm_fd, msg, sizeof(struct chat_message));
-        return;
+        return 1;
       }
-      return; // Valid DM, return
+      return 0; // Valid DM, return
     } else {
       // Invalid DM format, just print locally and don't send
       printf("Invalid DM format. Use: @username message\n");
       msg->content[0] = '\0'; // Empty message won't be sent
-      return;
+      return 1;
     }
   }
   // Only reach here for regular messages
   strncpy(msg->content, input, MAX_MSG_SIZE - 1);
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -146,9 +149,11 @@ int main(int argc, char *argv[]) {
     if (strcmp(input, "quit") == 0)
       break;
 
-    parse_message(&msg, input);
-    if (write(socket_desc, &msg, sizeof(msg)) == -1) {
-      panic("Failed to send message");
+    int already_sent = parse_message(&msg, input);
+    if (!already_sent) {
+      if (write(socket_desc, &msg, sizeof(msg)) == -1) {
+        panic("Failed to send message");
+      }
     }
   }
 
