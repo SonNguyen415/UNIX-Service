@@ -44,13 +44,20 @@ void *receive_messages(void *socket_ptr) {
 
   while (1) {
     if (read(socket_desc, &msg, sizeof(msg)) > 0) {
-      if (msg.is_dm) {
-        log_message("[DM] %s: %s\n", msg.username, msg.content);
-      } else {
-        log_message("%s: %s\n", msg.username, msg.content);
+      // Skip empty messages and only show valid messages
+      if (msg.content[0] != '\0') {
+        // Check for non-empty content
+        if (msg.is_dm) {
+          // Only show if we have a valid username
+          if (msg.username[0] != '\0') {
+            log_message("[DM] %s: %s\n", msg.username, msg.content);
+          }
+        } else {
+          log_message("%s: %s\n", msg.username, msg.content);
+        }
       }
     } else {
-      break; // Connection closed or error
+      break;  // Connection closed or error
     }
   }
   return NULL;
@@ -59,21 +66,39 @@ void *receive_messages(void *socket_ptr) {
 void parse_message(struct chat_message *msg, char *input) {
   msg->is_dm = 0;
 
+  // Check message length first
+  if (strlen(input) >= MAX_MSG_SIZE - 1) {
+    log_message("Message too long. Maximum length is %d characters\n", MAX_MSG_SIZE - 1);
+    msg->content[0] = '\0';  // Empty message won't be sent
+    return;
+  }
+
   if (input[0] == '@') {
     char *space = strchr(input, ' ');
     if (space && (space - input) > 1) { // Ensure there's a username
       int username_len = space - input - 1;
       strncpy(msg->target, input + 1, username_len);
       msg->target[username_len] = '\0';
+      
+      // Check if trying to DM yourself
+      if (strcmp(msg->target, msg->username) == 0) {
+        log_message("Cannot send DM to yourself\n");
+        msg->content[0] = '\0';  // Empty message won't be sent
+        return;
+      }
+
       strncpy(msg->content, space + 1, MAX_MSG_SIZE - 1);
       msg->is_dm = 1;
+      return;  // Valid DM, return
     } else {
-      strncpy(msg->content, "Invalid DM format. Use: @username message",
-              MAX_MSG_SIZE - 1);
+      // Invalid DM format, just print locally and don't send
+      log_message("Invalid DM format. Use: @username message\n");
+      msg->content[0] = '\0';  // Empty message won't be sent
+      return;
     }
-  } else {
-    strncpy(msg->content, input, MAX_MSG_SIZE - 1);
   }
+  // Only reach here for regular messages
+  strncpy(msg->content, input, MAX_MSG_SIZE - 1);
 }
 
 int main(int argc, char *argv[]) {
